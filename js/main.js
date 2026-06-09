@@ -4,7 +4,8 @@ import { VIEW_W, VIEW_H }                    from './constants.js';
 import { keys, cursors, initInput }          from './input.js';
 import { handleInput }                       from './player.js';
 import { updatePeekers, resetPeekers }       from './peekers.js';
-import { initRenderer, render }              from './renderer.js';
+import { initRenderer, render, zBuffer }     from './renderer.js';
+import { updateWeapon, tryShoot }            from './weapon.js';
 import { state, startGame, updateState,
          resetState }                        from './state.js';
 import { initHud, updateHud }               from './hud.js';
@@ -41,8 +42,10 @@ function update(_time, deltaMs) {
     }
   }
 
-  // Mellanslag på slutskärm → omstart
-  if ((state.phase === 'won' || state.phase === 'lost') && cursors.space.isDown) {
+  // Mellanslag på slutskärm → omstart. JustDown krävs — annars triggar
+  // ett nedhållet skjut-mellanslag omstarten direkt när sista fienden dör.
+  if ((state.phase === 'won' || state.phase === 'lost') &&
+      Phaser.Input.Keyboard.JustDown(cursors.space)) {
     resetState();
     resetPeekers();
     this.scene.restart();   // kör create() igen; Phaser rensar alla scenresurser
@@ -53,6 +56,11 @@ function update(_time, deltaMs) {
   if (state.phase === 'playing') {
     handleInput(dt);
     updatePeekers(dt);
+    updateWeapon(dt);
+    // Mellanslag = skjut. JustDown ger ett skott per nedtryckning.
+    if (Phaser.Input.Keyboard.JustDown(cursors.space)) {
+      tryShoot(this, zBuffer);
+    }
     updateState(dt);
   }
 

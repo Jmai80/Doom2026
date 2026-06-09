@@ -7,7 +7,7 @@ import { VIEW_W, VIEW_H }    from './constants.js';
 const FONT   = '"Courier New", monospace';
 const INK    = '#c9c4b8';
 const ACCENT = '#d6452f';
-const DIM    = '#4a4540';
+const DIM    = '#908c86';
 
 // Phaser-objekt — skapas i initHud(), uppdateras i updateHud() varje frame.
 let killsText, timerText, idleText, overlayGfx;
@@ -23,9 +23,12 @@ export function initHud(scene) {
     fontFamily: FONT, fontSize: '14px', color: INK,
   });
 
-  // --- Idle-prompt i mitten ---
+  // --- Idle-prompt i mitten — vit text med svart kontur + bakgrundsplatta ---
   idleText = scene.add.text(VIEW_W / 2, VIEW_H / 2, '[ TRYCK VALFRI KNAPP ]', {
-    fontFamily: FONT, fontSize: '14px', color: DIM,
+    fontFamily: FONT, fontSize: '18px', color: '#f2ede6',
+    stroke: '#000000', strokeThickness: 4,
+    backgroundColor: '#000000aa',
+    padding: { x: 14, y: 8 },
   }).setOrigin(0.5);
 
   // --- Halvtransparent överlayyta (fylls i updateHud) ---
@@ -41,8 +44,9 @@ export function initHud(scene) {
     fontFamily: FONT, fontSize: '16px', color: INK,
   }).setOrigin(0.5).setVisible(false);
 
-  lostHint = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 50, 'MELLANSLAG = STARTA OM', {
-    fontFamily: FONT, fontSize: '12px', color: DIM,
+  lostHint = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 52, 'MELLANSLAG = STARTA OM', {
+    fontFamily: FONT, fontSize: '15px', color: '#f2ede6',
+    stroke: '#000000', strokeThickness: 4,
   }).setOrigin(0.5).setVisible(false);
 
   // --- BANAN KLAR ---
@@ -55,11 +59,13 @@ export function initHud(scene) {
   }).setOrigin(0.5).setVisible(false);
 
   wonSub = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 38, '', {
-    fontFamily: FONT, fontSize: '13px', color: DIM,
+    fontFamily: FONT, fontSize: '13px', color: INK,
+    stroke: '#000000', strokeThickness: 3,
   }).setOrigin(0.5).setVisible(false);
 
-  wonHint = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 62, 'MELLANSLAG = STARTA OM', {
-    fontFamily: FONT, fontSize: '12px', color: DIM,
+  wonHint = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 64, 'MELLANSLAG = STARTA OM', {
+    fontFamily: FONT, fontSize: '15px', color: '#f2ede6',
+    stroke: '#000000', strokeThickness: 4,
   }).setOrigin(0.5).setVisible(false);
 }
 

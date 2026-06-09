@@ -1,10 +1,9 @@
-// Fiender som spawnar när spelaren kommer nära och stannar kvar på kartan
-// tills spelaren når fram till dem (eller senare: skjuter ned dem).
+// Fiender som spawnar när spelaren kommer nära. Elimineras genom att
+// skjutas ned (se weapon.js).
 //
 // State-maskin per fiende: 'waiting' → 'active' → 'gone'
 
 import { player }                       from './player.js';
-import { registerKill }                 from './state.js';
 import { VIEW_W, VIEW_H, COL_W,
          NUM_RAYS, FOV, HALF_FOV }      from './constants.js';
 
@@ -12,11 +11,11 @@ const FADE_IN = 0.4;   // sekunder för fade-in vid spawn
 
 // Fem fiender — alla positioner verifierade som öppna celler (0) i MAP.
 export const peekers = [
-  { x:  7.5, y:  2.5, state: 'waiting', fadeTimer: 0, triggerDist: 7, collectDist: 1.0 },
-  { x:  5.5, y:  5.5, state: 'waiting', fadeTimer: 0, triggerDist: 6, collectDist: 1.0 },
-  { x:  3.5, y:  9.5, state: 'waiting', fadeTimer: 0, triggerDist: 6, collectDist: 1.0 },
-  { x: 11.5, y:  7.5, state: 'waiting', fadeTimer: 0, triggerDist: 7, collectDist: 1.0 },
-  { x:  9.5, y: 13.5, state: 'waiting', fadeTimer: 0, triggerDist: 6, collectDist: 1.0 },
+  { x:  7.5, y:  2.5, state: 'waiting', fadeTimer: 0, triggerDist: 7 },
+  { x:  5.5, y:  5.5, state: 'waiting', fadeTimer: 0, triggerDist: 6 },
+  { x:  3.5, y:  9.5, state: 'waiting', fadeTimer: 0, triggerDist: 6 },
+  { x: 11.5, y:  7.5, state: 'waiting', fadeTimer: 0, triggerDist: 7 },
+  { x:  9.5, y: 13.5, state: 'waiting', fadeTimer: 0, triggerDist: 6 },
 ];
 
 /** Återställer alla fiender till starttillstånd. Kallas vid omstart. */
@@ -41,10 +40,7 @@ export function updatePeekers(dt) {
       }
     } else if (p.state === 'active') {
       p.fadeTimer = Math.min(p.fadeTimer + dt, FADE_IN);
-      if (dist < p.collectDist) {
-        p.state = 'gone';
-        registerKill();   // ← skottlogik ersätter detta anrop längre fram
-      }
+      // Fiender elimineras nu via skott (weapon.js), inte av närhet.
     }
   });
 }

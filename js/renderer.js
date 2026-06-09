@@ -4,11 +4,13 @@ import { VIEW_W, VIEW_H, COL_W, NUM_RAYS, FOV, HALF_FOV } from './constants.js';
 import { MAP, MAP_W, MAP_H }   from './map.js';
 import { player }              from './player.js';
 import { peekers, renderPeekers } from './peekers.js';
+import { weapon }              from './weapon.js';
 
 let gfx;
 // Djupbuffert: ett vinkelrätt väggavstånd per strålekolumn.
-// Används av renderPeekers() för korrekt ocklusion.
-const zBuffer = new Array(NUM_RAYS).fill(Infinity);
+// Används av renderPeekers() för ocklusion och av weapon.js för träffkoll.
+export const zBuffer    = new Array(NUM_RAYS).fill(Infinity);
+const BRICK_COURSE = 0.25;   // 4 tegelvarvshöjder per väggunit
 
 /** Anropas en gång i Phaser create() med det Graphics-objekt Phaser skapade. */
 export function initRenderer(graphics) {
@@ -40,10 +42,23 @@ export function render() {
 
     gfx.fillStyle(shade(hit.side, perp), 1);
     gfx.fillRect(i * COL_W, y0, COL_W + 1, lineH);
-  }
+
+    // Murbrukslinjer — horisontella i världsrymden, korrekt perspektiv.
+    // courseH är hur många pixlar ett tegelvarvs höjd upptar på skärmen.
+    // Under 4 px är linjerna osynliga och hoppas över (långt bort).
+    const courseH = lineH * BRICK_COURSE;
+    if (courseH >= 4) {
+      gfx.fillStyle(0x0c0806, 1);
+      for (let f = BRICK_COURSE; f < 1.0; f += BRICK_COURSE) {
+        gfx.fillRect(i * COL_W, Math.round(y0 + (1 - f) * lineH), COL_W + 1, 1);
+      }
+    }
+  }   // ← stänger for (let i = 0; i < NUM_RAYS; i++)
 
   renderPeekers(gfx, zBuffer);
   renderMinimap();
+  drawWeapon();
+  drawCrosshair();
 }
 
 // ---------------------------------------------------------------------------
@@ -143,4 +158,63 @@ function renderMinimap() {
   gfx.strokePath();
   gfx.fillStyle(0xd6452f, 1);
   gfx.fillCircle(px, py, 3);
+}
+
+// ---------------------------------------------------------------------------
+//  Gevärspipa — primitiv 2D-overlay centrerad i underkant av skärmen.
+//  Ritas efter allt annat så att den alltid ligger i förgrunden.
+//  Ersätts med riktig sprite när vapensystemet implementeras.
+// ---------------------------------------------------------------------------
+function drawWeapon() {
+  const cx  = VIEW_W / 2;
+  const top = VIEW_H - 75;    // mynningens synliga överkant
+
+  // Tracer — snabb ljusgul linje från mynningen mot siktet
+  if (weapon.tracerTimer > 0) {
+    gfx.lineStyle(2, 0xffe9a0, 0.9);
+    gfx.beginPath();
+    gfx.moveTo(cx, top - 4);
+    gfx.lineTo(cx, VIEW_H / 2 + 6);
+    gfx.strokePath();
+  }
+
+  // Yttre pipa
+  gfx.fillStyle(0x1c1a18, 1);
+  gfx.fillRect(cx - 10, top, 20, VIEW_H - top);
+
+  // Löp — mörkt hål i mitten av pipan
+  gfx.fillStyle(0x060504, 1);
+  gfx.fillRect(cx - 4, top + 3, 8, VIEW_H - top);
+
+  // Metallhighlight längs sidorna ger en lätt rundad känsla
+  gfx.fillStyle(0x2e2a26, 1);
+  gfx.fillRect(cx - 10, top, 2, VIEW_H - top);   // vänster kant
+  gfx.fillRect(cx + 8,  top, 2, VIEW_H - top);   // höger kant
+
+  // Framkorn (sigtbricka vid mynningen)
+  gfx.fillStyle(0x1c1a18, 1);
+  gfx.fillRect(cx - 2, top - 5, 4, 5);
+
+  // Mynningsflash — ritas sist så den ligger ovanpå pipan
+  if (weapon.flashTimer > 0) {
+    gfx.fillStyle(0xffd060, 0.95);
+    gfx.fillCircle(cx, top - 6, 9);
+    gfx.fillStyle(0xfff4c0, 0.95);
+    gfx.fillCircle(cx, top - 6, 5);
+  }
+}
+
+// Sikte — klassiskt kors i skärmens mitt med litet gap kring centrum
+function drawCrosshair() {
+  const cx = VIEW_W / 2;
+  const cy = VIEW_H / 2;
+  const GAP = 4, LEN = 7;
+
+  gfx.lineStyle(2, 0xf2ede6, 0.85);
+  gfx.beginPath();
+  gfx.moveTo(cx - GAP - LEN, cy); gfx.lineTo(cx - GAP, cy);   // vänster
+  gfx.moveTo(cx + GAP, cy);       gfx.lineTo(cx + GAP + LEN, cy); // höger
+  gfx.moveTo(cx, cy - GAP - LEN); gfx.lineTo(cx, cy - GAP);   // upp
+  gfx.moveTo(cx, cy + GAP);       gfx.lineTo(cx, cy + GAP + LEN); // ner
+  gfx.strokePath();
 }
