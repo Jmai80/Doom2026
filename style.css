@@ -1,0 +1,28 @@
+:root {
+  --bg:     #0a0a0c;
+  --ink:    #c9c4b8;
+  --accent: #d6452f;
+}
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+#game {
+  width: 100vw; height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Styrningsinstruktioner nere till vänster. Ta bort #hud i index.html om du inte vill ha dem. */
+#hud {
+  position: fixed; left: 14px; bottom: 12px;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 12px; letter-spacing: 1px;
+  color: var(--ink); text-transform: uppercase;
+  pointer-events: none; user-select: none;
+  text-shadow: 0 1px 0 #000;
+  line-height: 1.6;
+}
+#hud b { color: var(--accent); }

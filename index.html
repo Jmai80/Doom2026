@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doom2026</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Phaser laddas som ett vanligt skript (globalt) innan modulerna körs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
+</head>
+<body>
+  <div id="game"></div>
+  <div id="hud">
+    <div><b>↑</b>/<b>↓</b> framåt &amp; bak &nbsp;&nbsp; <b>←</b>/<b>→</b> vrid &nbsp;&nbsp; <b>Q</b>/<b>E</b> sidled</div>
+    <div style="opacity:0.45">W / A / S / D fungerar också</div>
+  </div>
+  <!-- type="module" aktiverar ES-moduler; Phaser-global är redan laddad -->
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
