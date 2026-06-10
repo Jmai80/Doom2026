@@ -11,7 +11,7 @@ export const LEVELS = [
   // ------------------------------------------------------------ BANA 1 ---
   {
     name: 'BANA 1',
-    timeLimit: 45,
+    timeLimit: 60,
     playerStart: { x: 1.5, y: 1.5, dir: 0 },
     map: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -45,7 +45,7 @@ export const LEVELS = [
   // längre siktlinjer och fiender som vaktar varsitt område.
   {
     name: 'BANA 2',
-    timeLimit: 45,
+    timeLimit: 60,
     playerStart: { x: 8.0, y: 8.0, dir: -Math.PI / 2 },   // mitten, tittar norrut
     map: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],

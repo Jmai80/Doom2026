@@ -25,6 +25,13 @@ export function handleInput(dt) {
   if (keys.D.isDown || cursors.right.isDown || touchState.turnRight)
     player.dir += player.turnSpeed * dt;
 
+  // Drag-sikte (touch): positionsbaserat, inte hastighetsbaserat — appliceras
+  // rått utan dt. ~0.005 rad/px ≈ ett svep över halva skärmen vrider ~quarter varv.
+  if (touchState.dragDX !== 0) {
+    player.dir += touchState.dragDX * 0.005;
+    touchState.dragDX = 0;
+  }
+
   const cos = Math.cos(player.dir);
   const sin = Math.sin(player.dir);
   let dx = 0, dy = 0;

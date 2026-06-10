@@ -18,6 +18,7 @@ html, body {
 #game {
   width: 100vw; height: 100vh;
   display: flex; align-items: center; justify-content: center;
+  touch-action: none;   /* drag-sikte: webbläsaren får inte tolka svep som scroll */
 }
 
 /* Styrningsinstruktioner — bara relevanta för tangentbord */

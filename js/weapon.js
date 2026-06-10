@@ -3,7 +3,8 @@
 
 import { player }       from './player.js';
 import { peekers, killPeeker } from './peekers.js';
-import { registerKill } from './state.js';
+import { registerKill }  from './state.js';
+import { isTouchDevice } from './input.js';
 import { NUM_RAYS, FOV } from './constants.js';
 
 const FLASH_TIME  = 0.07;   // sekunder mynningsflash syns
@@ -64,11 +65,10 @@ function hitScan(zBuffer, scene) {
     while (angleDiff >  Math.PI) angleDiff -= Math.PI * 2;
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
-    // Träffzon = bara huvudet. 0.12 kartunits matchar huvudradien i
-    // drawStickFigure (headR = h * 0.12). Eftersom skott alltid går i
-    // "ögonhöjd" (inget vertikalt sikte) blir detta en smal horisontell
-    // zon — siktet måste ligga i linje med gubbens huvud/kroppslinje.
-    const halfWidth = Math.atan(0.12 / dist);
+    // Träffzon: huvudbredd på desktop (0.12), breddad till 0.20 på touch —
+    // klassisk aim assist som kompenserar pekskärmens lägre siktprecision.
+    const hitRadius = isTouchDevice ? 0.20 : 0.12;
+    const halfWidth = Math.atan(hitRadius / dist);
     if (Math.abs(angleDiff) > halfWidth) return;   // missade i sidled
 
     // Skyms fienden av en vägg? Kolla zBuffer i fiendens skärmkolumn.

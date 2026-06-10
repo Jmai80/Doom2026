@@ -5,13 +5,18 @@
 export let keys;
 export let cursors;
 
+// Touch-enhet? Avgör bl.a. aim assist i weapon.js. Evalueras en gång.
+export const isTouchDevice =
+  typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+
 // Pekkontrollernas tillstånd. Läses av player.js precis som tangenterna.
 export const touchState = {
   forward:   false,
   back:      false,
   turnLeft:  false,
   turnRight: false,
-  anyTouch:  false,   // sätts vid varje knappnedtryck — används för spelstart
+  anyTouch:  false,   // sätts vid varje tryck — används för spelstart
+  dragDX:    0,       // ackumulerade drag-pixlar sedan förra framen (sikte)
 };
 
 // Edge-flagga för FIRE: sätts en gång per nedtryckning, konsumeras av main.js.
@@ -21,7 +26,6 @@ let firePressed = false;
 export function initInput(scene) {
   keys    = scene.input.keyboard.addKeys('W,A,S,D,Q,E');
   cursors = scene.input.keyboard.createCursorKeys();   // UP DOWN LEFT RIGHT SPACE
-  // Ge canvas fokus direkt så tangenter fungerar utan att man klickar först.
   scene.game.canvas.setAttribute('tabindex', '0');
   scene.game.canvas.focus();
 
@@ -36,10 +40,9 @@ export function consumeFireTap() {
 }
 
 // ---------------------------------------------------------------------------
-//  Pekknappar — kopplas mot DOM-elementen i index.html
+//  Pekknappar + drag-sikte
 // ---------------------------------------------------------------------------
 function initTouch() {
-  // Håll-knappar: flaggan är sann så länge fingret ligger på knappen
   bindHold('btn-up',    'forward');
   bindHold('btn-down',  'back');
   bindHold('btn-left',  'turnLeft');
@@ -54,15 +57,51 @@ function initTouch() {
       touchState.anyTouch = true;
     });
   }
+
+  initDragAim();
+}
+
+// Drag-för-att-sikta: dra med fingret på spelvyn för att vrida blicken.
+// Analogt och positionsbaserat — liten tumrörelse ger liten vridning.
+// Endast touch-pekare; mus på desktop påverkas inte.
+function initDragAim() {
+  const surface = document.getElementById('game');
+  if (!surface) return;
+
+  let dragging = false;
+  let lastX = 0;
+
+  surface.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'touch') return;
+    e.preventDefault();
+    dragging = true;
+    lastX = e.clientX;
+    touchState.anyTouch = true;          // tryck på vyn kan starta spelet
+    surface.setPointerCapture?.(e.pointerId);
+  });
+
+  surface.addEventListener('pointermove', e => {
+    if (!dragging || e.pointerType !== 'touch') return;
+    e.preventDefault();
+    touchState.dragDX += e.clientX - lastX;   // ackumuleras; konsumeras per frame
+    lastX = e.clientX;
+  });
+
+  const stop = e => {
+    if (e.pointerType !== 'touch') return;
+    dragging = false;
+  };
+  surface.addEventListener('pointerup',     stop);
+  surface.addEventListener('pointercancel', stop);
 }
 
 function bindHold(id, prop) {
   const el = document.getElementById(id);
-  if (!el) return;   // knapparna finns men är dolda på desktop — null-säkra ändå
+  if (!el) return;
 
   const press = e => {
     e.preventDefault();
-    el.setPointerCapture?.(e.pointerId);   // behåll eventet om fingret glider
+    el.setPointerCapture?.(e.pointerId);
     touchState[prop]    = true;
     touchState.anyTouch = true;
   };
@@ -74,6 +113,5 @@ function bindHold(id, prop) {
   el.addEventListener('pointerdown',   press);
   el.addEventListener('pointerup',     release);
   el.addEventListener('pointercancel', release);
-  // contextmenu vid långtryck på iOS/Android skulle annars frysa knappen
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
