@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Doom2026</title>
   <link rel="stylesheet" href="style.css">
   <!-- Phaser laddas som ett vanligt skript (globalt) innan modulerna körs -->
@@ -10,10 +10,23 @@
 </head>
 <body>
   <div id="game"></div>
+
   <div id="hud">
-    <div><b>↑</b>/<b>↓</b> framåt &amp; bak &nbsp;&nbsp; <b>←</b>/<b>→</b> vrid &nbsp;&nbsp; <b>Q</b>/<b>E</b> sidled</div>
+    <div><b>↑</b>/<b>↓</b> framåt &amp; bak &nbsp;&nbsp; <b>←</b>/<b>→</b> vrid &nbsp;&nbsp; <b>Q</b>/<b>E</b> sidled &nbsp;&nbsp; <b>SPACE</b> skjut</div>
     <div style="opacity:0.45">W / A / S / D fungerar också</div>
   </div>
+
+  <!-- Pekkontroller — visas bara på touchskärmar (styrs av style.css) -->
+  <div id="touch-controls">
+    <div id="dpad">
+      <button id="btn-up"    class="tbtn" aria-label="Framåt">▲</button>
+      <button id="btn-left"  class="tbtn" aria-label="Vrid vänster">◀</button>
+      <button id="btn-right" class="tbtn" aria-label="Vrid höger">▶</button>
+      <button id="btn-down"  class="tbtn" aria-label="Bakåt">▼</button>
+    </div>
+    <button id="btn-fire" class="tbtn" aria-label="Skjut">FIRE</button>
+  </div>
+
   <!-- type="module" aktiverar ES-moduler; Phaser-global är redan laddad -->
   <script type="module" src="./js/main.js"></script>
 </body>

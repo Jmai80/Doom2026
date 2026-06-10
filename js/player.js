@@ -1,7 +1,7 @@
 // Spelartillstånd och rörelselogik.
 
-import { keys, cursors } from './input.js';
-import { isWall }        from './map.js';
+import { keys, cursors, touchState } from './input.js';
+import { isWall }                    from './map.js';
 
 export const player = {
   x: 1.5, y: 1.5,   // startposition — MAP[1][1] är en verifierad öppen cell
@@ -11,18 +11,20 @@ export const player = {
   radius: 0.18,      // krockbuffert mot väggar
 };
 
-/** Läser av tangenter och uppdaterar player.x / player.y / player.dir. */
+/** Läser av tangenter + pekkontroller och uppdaterar spelarens position. */
 export function handleInput(dt) {
-  if (keys.A.isDown || cursors.left.isDown)  player.dir -= player.turnSpeed * dt;
-  if (keys.D.isDown || cursors.right.isDown) player.dir += player.turnSpeed * dt;
+  if (keys.A.isDown || cursors.left.isDown  || touchState.turnLeft)
+    player.dir -= player.turnSpeed * dt;
+  if (keys.D.isDown || cursors.right.isDown || touchState.turnRight)
+    player.dir += player.turnSpeed * dt;
 
   const cos = Math.cos(player.dir);
   const sin = Math.sin(player.dir);
   let dx = 0, dy = 0;
 
-  if (keys.W.isDown || cursors.up.isDown)   { dx += cos; dy += sin; }
-  if (keys.S.isDown || cursors.down.isDown) { dx -= cos; dy -= sin; }
-  if (keys.Q.isDown) { dx += sin; dy -= cos; }   // strafe vänster
+  if (keys.W.isDown || cursors.up.isDown   || touchState.forward) { dx += cos; dy += sin; }
+  if (keys.S.isDown || cursors.down.isDown || touchState.back)    { dx -= cos; dy -= sin; }
+  if (keys.Q.isDown) { dx += sin; dy -= cos; }   // strafe vänster (endast tangentbord)
   if (keys.E.isDown) { dx -= sin; dy += cos; }    // strafe höger
 
   // Normalisera så diagonal rörelse inte är snabbare

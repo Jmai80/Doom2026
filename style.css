@@ -2,12 +2,17 @@
   --bg:     #0a0a0c;
   --ink:    #c9c4b8;
   --accent: #d6452f;
+  --btn-bg:     rgba(20, 18, 16, 0.85);
+  --btn-border: rgba(214, 69, 47, 0.55);
 }
 
 html, body {
   margin: 0; padding: 0; height: 100%;
   background: var(--bg);
   overflow: hidden;
+  /* Stoppar dubbeltapp-zoom och gummiband-scroll på mobil */
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 #game {
@@ -15,7 +20,7 @@ html, body {
   display: flex; align-items: center; justify-content: center;
 }
 
-/* Styrningsinstruktioner nere till vänster. Ta bort #hud i index.html om du inte vill ha dem. */
+/* Styrningsinstruktioner — bara relevanta för tangentbord */
 #hud {
   position: fixed; left: 14px; bottom: 12px;
   font-family: "Courier New", ui-monospace, monospace;
@@ -26,3 +31,94 @@ html, body {
   line-height: 1.6;
 }
 #hud b { color: var(--accent); }
+
+/* ===========================================================================
+   PEKKONTROLLER
+   Dolda på desktop. Synliga på pekskärm (pointer: coarse), med två layouter:
+   - Porträtt:  spelvy upptill, kontrollpanel på egen yta under
+   - Landskap:  fullskärmsvy, halvtransparenta kontroller i nederhörnen
+   =========================================================================== */
+
+#touch-controls { display: none; }
+
+.tbtn {
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 22px;
+  color: var(--ink);
+  background: var(--btn-bg);
+  border: 2px solid var(--btn-border);
+  border-radius: 10px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.tbtn:active {
+  background: rgba(214, 69, 47, 0.35);
+}
+
+#dpad {
+  display: grid;
+  grid-template-areas:
+    ".    up    ."
+    "left .     right"
+    ".    down  .";
+  gap: 8px;
+}
+#btn-up    { grid-area: up; }
+#btn-down  { grid-area: down; }
+#btn-left  { grid-area: left; }
+#btn-right { grid-area: right; }
+
+#btn-fire {
+  color: var(--accent);
+  font-weight: bold;
+  letter-spacing: 2px;
+  border-radius: 50%;
+}
+
+@media (pointer: coarse) {
+  #hud { display: none; }   /* tangentbordsinstruktioner irrelevanta */
+  #touch-controls { display: block; }
+
+  /* ---------- PORTRÄTT: spelvy upptill, kontroller under ---------- */
+  @media (orientation: portrait) {
+    #game {
+      height: 56vh;
+      align-items: flex-start;   /* canvas mot skärmens topp */
+    }
+    #touch-controls {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      height: 42vh;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 6vw calc(env(safe-area-inset-bottom, 0px) + 2vh);
+      box-sizing: border-box;
+    }
+    .tbtn { width: 62px; height: 62px; }
+    #btn-fire { width: 96px; height: 96px; font-size: 18px; }
+  }
+
+  /* ---------- LANDSKAP: fullskärmsvy, overlay i hörnen ---------- */
+  @media (orientation: landscape) {
+    #game { height: 100vh; }
+    #touch-controls {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      pointer-events: none;       /* bara knapparna fångar tryck, inte ytan */
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 4vw calc(env(safe-area-inset-bottom, 0px) + 3vh);
+      box-sizing: border-box;
+    }
+    .tbtn {
+      pointer-events: auto;
+      width: 54px; height: 54px;
+      opacity: 0.55;              /* halvtransparent så vyn syns igenom */
+    }
+    #btn-fire { width: 84px; height: 84px; font-size: 16px; }
+  }
+}

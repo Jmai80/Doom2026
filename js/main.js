@@ -1,7 +1,8 @@
 // Phaser-setup och spelloop.
 
 import { VIEW_W, VIEW_H }                    from './constants.js';
-import { keys, cursors, initInput }          from './input.js';
+import { keys, cursors, initInput,
+         touchState, consumeFireTap }        from './input.js';
 import { handleInput }                       from './player.js';
 import { updatePeekers, resetPeekers }       from './peekers.js';
 import { initRenderer, render, zBuffer }     from './renderer.js';
@@ -29,26 +30,29 @@ function create() {
 function update(_time, deltaMs) {
   const dt = deltaMs / 1000;
 
-  // Valfri knapp under idle → starta timer + musik
+  // Valfri knapp/pektryck under idle → starta timer + musik
   if (state.phase === 'idle') {
     const anyKey =
       Object.values(keys).some(k => k.isDown) ||
       cursors.up.isDown || cursors.down.isDown ||
       cursors.left.isDown || cursors.right.isDown ||
-      cursors.space.isDown;
+      cursors.space.isDown ||
+      touchState.anyTouch;
     if (anyKey) {
       startGame();
       if (gameMusic && !gameMusic.isPlaying) gameMusic.play();
-      // Konsumera mellanslagets JustDown-flagga — annars avlossas ett
-      // skott i samma frame som spelet startar (fasen hinner bli 'playing').
+      // Konsumera start-trycket — annars avlossas ett skott i samma frame
+      // som spelet startar (gäller både mellanslag och FIRE-knappen).
       Phaser.Input.Keyboard.JustDown(cursors.space);
+      consumeFireTap();
+      touchState.anyTouch = false;
     }
   }
 
-  // Mellanslag på slutskärm → omstart. JustDown krävs — annars triggar
-  // ett nedhållet skjut-mellanslag omstarten direkt när sista fienden dör.
+  // Mellanslag eller FIRE på slutskärm → omstart. Edge-detektering krävs —
+  // annars triggar ett nedhållet skjut-tryck omstarten när sista fienden dör.
   if ((state.phase === 'won' || state.phase === 'lost') &&
-      Phaser.Input.Keyboard.JustDown(cursors.space)) {
+      (Phaser.Input.Keyboard.JustDown(cursors.space) || consumeFireTap())) {
     resetState();
     resetPeekers();
     this.scene.restart();   // kör create() igen; Phaser rensar alla scenresurser
@@ -60,8 +64,8 @@ function update(_time, deltaMs) {
     handleInput(dt);
     updatePeekers(dt);
     updateWeapon(dt);
-    // Mellanslag = skjut. JustDown ger ett skott per nedtryckning.
-    if (Phaser.Input.Keyboard.JustDown(cursors.space)) {
+    // Mellanslag eller FIRE-knapp = skjut. Båda är edge-detekterade.
+    if (Phaser.Input.Keyboard.JustDown(cursors.space) || consumeFireTap()) {
       tryShoot(this, zBuffer);
     }
     updateState(dt);
@@ -87,4 +91,15 @@ new Phaser.Game({
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   scene: [Boot, Preloader, { key: 'Game', create, update }],
+});
+
+// #game-containerns höjd ändras vid orienteringsbyte (porträtt 56vh,
+// landskap 100vh) — be Phaser mäta om och skala om canvasen.
+window.addEventListener('resize', () => {
+  // Liten fördröjning: iOS rapporterar ibland gamla mått direkt efter rotation
+  setTimeout(() => window.dispatchEvent(new Event('orientationdone')), 120);
+});
+window.addEventListener('orientationdone', () => {
+  const game = Phaser.GAMES?.[0];
+  game?.scale.refresh();
 });
