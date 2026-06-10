@@ -2,7 +2,7 @@
 // Hitscan-mekanik (som Wolfenstein): skottet träffar omedelbart.
 
 import { player }       from './player.js';
-import { peekers }      from './peekers.js';
+import { peekers, killPeeker } from './peekers.js';
 import { registerKill } from './state.js';
 import { NUM_RAYS, FOV } from './constants.js';
 
@@ -39,7 +39,7 @@ export function tryShoot(scene, zBuffer) {
   weapon.tracerTimer = TRACER_TIME;
   scene.sound.play('shoot', { volume: 0.5 });
 
-  hitScan(zBuffer);
+  hitScan(zBuffer, scene);
   return true;
 }
 
@@ -47,7 +47,7 @@ export function tryShoot(scene, zBuffer) {
  * Letar efter en träffad fiende rakt fram i siktet.
  * Närmaste träffbara fiende vinner (du kan inte skjuta genom en fiende).
  */
-function hitScan(zBuffer) {
+function hitScan(zBuffer, scene) {
   let best = null;
   let bestDist = MAX_RANGE;
 
@@ -82,7 +82,8 @@ function hitScan(zBuffer) {
   });
 
   if (best) {
-    best.state = 'gone';
+    killPeeker(best);                              // startar fallanimationen
+    scene?.sound.play('ouch', { volume: 0.6 });    // träffåterkoppling
     registerKill();
   }
 }

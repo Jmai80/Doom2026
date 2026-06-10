@@ -126,7 +126,7 @@ export function updateHud() {
   lostHint.setVisible(isLost && unlocked);
   lostSub.setVisible(isLost);
   if (isLost) {
-    lostSub.setText(`${levelName}: ${kills} AV ${totalEnemies} FIENDER NEDGJORDA`);
+    lostSub.setText(`${levelName}: ${kills} AV ${totalEnemies} FIENDER NEDSKJUTNA`);
   }
 
   // --- BANA KLAR ---

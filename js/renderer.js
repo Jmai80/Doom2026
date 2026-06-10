@@ -5,6 +5,7 @@ import { MAP, MAP_W, MAP_H }   from './map.js';
 import { player }              from './player.js';
 import { peekers, renderPeekers } from './peekers.js';
 import { weapon }              from './weapon.js';
+import { state }               from './state.js';
 
 let gfx;
 // Djupbuffert: ett vinkelrätt väggavstånd per strålekolumn.
@@ -59,6 +60,12 @@ export function render() {
   renderMinimap();
   drawWeapon();
   drawCrosshair();
+
+  // Skadeblixt — röd overlay som tonar bort efter en bossträff
+  if (state.hitFlash > 0) {
+    gfx.fillStyle(0xff1010, state.hitFlash * 1.3);   // 0.35s → max ~0.46 alpha
+    gfx.fillRect(0, 0, VIEW_W, VIEW_H);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -137,12 +144,18 @@ function renderMinimap() {
   gfx.lineStyle(1, 0x6b4030, 0.9);
   gfx.strokeRect(ox - 2, oy - 2, W + 4, H + 4);
 
-  // Aktiva fiender — pulserande röd prick
+  // Aktiva fiender — pulserande röd prick; bossen större med ring
   peekers.forEach(p => {
     if (p.state !== 'active') return;
     const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 120);
+    const ex = ox + p.x * CELL;
+    const ey = oy + p.y * CELL;
     gfx.fillStyle(0xff2020, pulse);
-    gfx.fillCircle(ox + p.x * CELL, oy + p.y * CELL, 2.5);
+    gfx.fillCircle(ex, ey, p.boss ? 4 : 2.5);
+    if (p.boss) {
+      gfx.lineStyle(1, 0xff2020, pulse);
+      gfx.strokeCircle(ex, ey, 6);
+    }
   });
 
   // Spelaren — prick + riktningslinje

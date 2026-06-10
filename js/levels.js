@@ -36,7 +36,7 @@ export const LEVELS = [
       { x:  5.5, y:  5.5, triggerDist: 6 },
       { x:  3.5, y:  9.5, triggerDist: 6 },
       { x: 11.5, y:  7.5, triggerDist: 7 },
-      { x:  9.5, y: 13.5, triggerDist: 6 },
+      { x:  9.5, y: 13.5, triggerDist: 6, boss: true },
     ],
   },
 
@@ -70,7 +70,7 @@ export const LEVELS = [
       { x: 14.5, y:  1.5, triggerDist: 8 },   // nordöstra rummet
       { x:  1.5, y: 14.5, triggerDist: 8 },   // sydvästra rummet
       { x: 14.5, y: 14.5, triggerDist: 8 },   // sydöstra rummet
-      { x:  8.5, y:  3.5, triggerDist: 6 },   // norra korridoren
+      { x:  8.5, y:  3.5, triggerDist: 6, boss: true },   // norra korridoren
     ],
   },
 

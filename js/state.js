@@ -10,6 +10,7 @@ export const state = {
   levelTimeLimit: 0,      // banans tidsgräns (sätts av loadLevel)
   totalTime:      0,      // ackumulerad speltid över klarade banor = score
   uiLockout:      0,      // sekunder kvar innan slut-/mellanskärm tar emot input
+  hitFlash:       0,      // sekunder kvar av röd skadeblixt (sätts av stealTime)
 };
 
 /** Kallas vid första knapptryckning — startar timern. */
@@ -24,8 +25,17 @@ export function registerKill() {
   state.kills += 1;
 }
 
+/** Bossträff: stjäl sekunder från timern och trigga röd skärmblixt. */
+export function stealTime(seconds) {
+  if (state.phase !== 'playing') return;
+  state.timeLeft = Math.max(0, state.timeLeft - seconds);
+  state.hitFlash = 0.35;
+  // timeLeft kan nå 0 här — updateState() hanterar förlustövergången
+}
+
 /** Uppdaterar timern. Anropas varje frame under 'playing'. */
 export function updateState(dt) {
+  state.hitFlash = Math.max(0, state.hitFlash - dt);
   if (state.phase !== 'playing') return;
   state.timeLeft = Math.max(0, state.timeLeft - dt);
   if (state.timeLeft === 0) {
@@ -41,5 +51,6 @@ export function resetState() {
   state.kills        = 0;
   state.totalTime    = 0;
   state.uiLockout    = 0;
+  state.hitFlash     = 0;
   // timeLeft/totalEnemies/levelTimeLimit sätts av loadLevel()
 }

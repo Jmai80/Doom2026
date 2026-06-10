@@ -1,5 +1,5 @@
 // Phaser-setup och spelloop.
- 
+
 import { VIEW_W, VIEW_H }                    from './constants.js';
 import { keys, cursors, initInput,
          touchState, consumeFireTap }        from './input.js';
@@ -13,13 +13,13 @@ import { initHud, updateHud }                from './hud.js';
 import { loadLevel, hasNextLevel }           from './levels.js';
 import Boot                                  from './Boot.js';
 import Preloader                             from './Preloader.js';
- 
+
 let gameMusic = null;
- 
+
 // ---------------------------------------------------------------------------
 //  Phaser scene-funktioner
 // ---------------------------------------------------------------------------
- 
+
 function create() {
   initInput(this);
   initRenderer(this.add.graphics());
@@ -29,10 +29,10 @@ function create() {
   // återanvänd befintlig instans, annars skapas en dubblett som spelar ovanpå.
   gameMusic = this.sound.get('music') || this.sound.add('music', { loop: true, volume: 0.4 });
 }
- 
+
 function update(_time, deltaMs) {
   const dt = deltaMs / 1000;
- 
+
   // Valfri knapp/pektryck under idle → starta timer + musik
   if (state.phase === 'idle') {
     const anyKey =
@@ -50,7 +50,7 @@ function update(_time, deltaMs) {
       touchState.anyTouch = false;
     }
   }
- 
+
   // Skärmlås: räkna ned, och sluka tryck som görs medan låset är aktivt —
   // annars ligger de kvar i JustDown/fire-flaggorna och triggar direkt
   // när låset släpper.
@@ -59,14 +59,14 @@ function update(_time, deltaMs) {
     Phaser.Input.Keyboard.JustDown(cursors.space);
     consumeFireTap();
   }
- 
+
   // Banan klar → mellanslag/FIRE laddar nästa bana (när låset släppt)
   if (state.phase === 'levelclear' && state.uiLockout === 0 &&
       (Phaser.Input.Keyboard.JustDown(cursors.space) || consumeFireTap())) {
     loadLevel(state.currentLevel + 1);
     state.phase = 'playing';
   }
- 
+
   // Slutskärm (vinst/förlust) → mellanslag/FIRE startar om (när låset släppt)
   if ((state.phase === 'won' || state.phase === 'lost') && state.uiLockout === 0 &&
       (Phaser.Input.Keyboard.JustDown(cursors.space) || consumeFireTap())) {
@@ -74,17 +74,17 @@ function update(_time, deltaMs) {
     this.scene.restart();   // create() körs igen och laddar bana 0
     return;
   }
- 
+
   // Normal spellogik
   if (state.phase === 'playing') {
     handleInput(dt);
-    updatePeekers(dt);
+    updatePeekers(dt, this);
     updateWeapon(dt);
     if (Phaser.Input.Keyboard.JustDown(cursors.space) || consumeFireTap()) {
       tryShoot(this, zBuffer);
     }
     updateState(dt);
- 
+
     // Banklarering: alla fiender nere → lägg banans tid till totalen,
     // gå till mellanskärm eller (sista banan) vinstskärm. Skärmen låses
     // en stund så ett dubbeltryck på sista skottet inte hoppar förbi den.
@@ -99,15 +99,15 @@ function update(_time, deltaMs) {
       }
     }
   }
- 
+
   render();
   updateHud();
 }
- 
+
 // ---------------------------------------------------------------------------
 //  Starta spelet
 // ---------------------------------------------------------------------------
- 
+
 new Phaser.Game({
   type: Phaser.AUTO,
   width: VIEW_W,
@@ -121,7 +121,7 @@ new Phaser.Game({
   },
   scene: [Boot, Preloader, { key: 'Game', create, update }],
 });
- 
+
 // #game-containerns höjd ändras vid orienteringsbyte — be Phaser mäta om.
 window.addEventListener('resize', () => {
   setTimeout(() => window.dispatchEvent(new Event('orientationdone')), 120);
@@ -130,4 +130,3 @@ window.addEventListener('orientationdone', () => {
   const game = Phaser.GAMES?.[0];
   game?.scale.refresh();
 });
- 
