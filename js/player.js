@@ -6,8 +6,8 @@ import { isWall }                    from './map.js';
 export const player = {
   x: 1.5, y: 1.5,    // sätts om av resetPlayer() vid banladdning
   dir: 0,
-  moveSpeed: 3.2,    // rutor per sekund
-  turnSpeed: 2.8,    // radianer per sekund
+  moveSpeed: 3.2,    // rutor per sekund (max)
+  turnSpeed: 2.8,    // radianer per sekund (max)
   radius: 0.18,      // krockbuffert mot väggar
 };
 
@@ -20,32 +20,43 @@ export function resetPlayer({ x, y, dir }) {
 
 /** Läser av tangenter + pekkontroller och uppdaterar spelarens position. */
 export function handleInput(dt) {
-  if (keys.A.isDown || cursors.left.isDown  || touchState.turnLeft)
-    player.dir -= player.turnSpeed * dt;
-  if (keys.D.isDown || cursors.right.isDown || touchState.turnRight)
-    player.dir += player.turnSpeed * dt;
+  // --- Vridning: tangenter är binära (-1/0/1), joystickens x är analog ---
+  let turn = 0;
+  if (keys.A.isDown || cursors.left.isDown)  turn -= 1;
+  if (keys.D.isDown || cursors.right.isDown) turn += 1;
+  turn += touchState.joyX;
+  turn = Math.max(-1, Math.min(1, turn));
+  player.dir += turn * player.turnSpeed * dt;
 
-  // Drag-sikte (touch): positionsbaserat, inte hastighetsbaserat — appliceras
-  // rått utan dt. ~0.005 rad/px ≈ ett svep över halva skärmen vrider ~quarter varv.
+  // Drag-sikte (touch): positionsbaserat, appliceras rått utan dt.
   if (touchState.dragDX !== 0) {
     player.dir += touchState.dragDX * 0.005;
     touchState.dragDX = 0;
   }
 
+  // --- Rörelse: framåt/bakåt analogt, strafe endast tangentbord ---
+  let fwd = 0;
+  if (keys.W.isDown || cursors.up.isDown)   fwd += 1;
+  if (keys.S.isDown || cursors.down.isDown) fwd -= 1;
+  fwd += -touchState.joyY;                  // upp på plattan = framåt
+  fwd = Math.max(-1, Math.min(1, fwd));
+
+  let strafe = 0;
+  if (keys.Q.isDown) strafe -= 1;
+  if (keys.E.isDown) strafe += 1;
+
   const cos = Math.cos(player.dir);
   const sin = Math.sin(player.dir);
-  let dx = 0, dy = 0;
+  // Strafe åt höger (E, strafe=+1) = +90° från blickriktningen
+  const dx = fwd * cos + strafe * -sin;
+  const dy = fwd * sin + strafe *  cos;
 
-  if (keys.W.isDown || cursors.up.isDown   || touchState.forward) { dx += cos; dy += sin; }
-  if (keys.S.isDown || cursors.down.isDown || touchState.back)    { dx -= cos; dy -= sin; }
-  if (keys.Q.isDown) { dx += sin; dy -= cos; }   // strafe vänster (endast tangentbord)
-  if (keys.E.isDown) { dx -= sin; dy += cos; }    // strafe höger
-
+  // Begränsa till max moveSpeed men bevara analog finkänslighet:
+  // |input| <= 1 ger proportionell fart, diagonaler klipps till 1.
   const len = Math.hypot(dx, dy);
-  if (len > 0) {
-    dx = (dx / len) * player.moveSpeed * dt;
-    dy = (dy / len) * player.moveSpeed * dt;
-    tryMove(dx, dy);
+  if (len > 0.001) {
+    const speed = Math.min(len, 1) * player.moveSpeed * dt;
+    tryMove((dx / len) * speed, (dy / len) * speed);
   }
 }
 

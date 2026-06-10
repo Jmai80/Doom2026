@@ -4,13 +4,14 @@
 import { state }          from './state.js';
 import { LEVELS }         from './levels.js';
 import { VIEW_W, VIEW_H } from './constants.js';
+import { isTouchDevice }  from './input.js';
 
 const FONT   = '"Courier New", monospace';
 const INK    = '#c9c4b8';
 const ACCENT = '#d6452f';
 const DIM    = '#908c86';
 
-let levelText, killsText, timerText, idleText, overlayGfx;
+let levelText, killsText, timerText, idleText, idleTouchHint, overlayGfx;
 let lostTitle, lostSub, lostHint;
 let wonTitle, wonTime, wonSub, wonHint;
 let clearTitle, clearTime, clearTotal, clearHint;
@@ -34,6 +35,16 @@ export function initHud(scene) {
     backgroundColor: '#000000aa',
     padding: { x: 14, y: 8 },
   }).setOrigin(0.5);
+
+  // Engångsinstruktion för pekstyrning — visas bara på touch-enheter
+  idleTouchHint = scene.add.text(
+    VIEW_W / 2, VIEW_H / 2 + 46,
+    'STYR MED PLATTAN · DRA PÅ SKÄRMEN FÖR ATT SIKTA',
+    {
+      fontFamily: FONT, fontSize: '12px', color: DIM,
+      stroke: '#000000', strokeThickness: 3,
+    }
+  ).setOrigin(0.5).setVisible(false);
 
   overlayGfx = scene.add.graphics();
 
@@ -112,6 +123,7 @@ export function updateHud() {
   killsText.setVisible(inGame);
   timerText.setVisible(inGame);
   idleText.setVisible(phase === 'idle');
+  idleTouchHint.setVisible(phase === 'idle' && isTouchDevice);
 
   // --- Overlay-bakgrund ---
   overlayGfx.clear();

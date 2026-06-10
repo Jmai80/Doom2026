@@ -1,22 +1,20 @@
 // Tangentbord + pekkontroller. Enda modulen som vet något om inputkällor.
-// keys/cursors exporteras som live bindings; touchState är ett muterbart
-// objekt vars flaggor sätts av pointer-events på DOM-knapparna.
+// Pekstyrningen: virtuell joystick (analog rörelse/vridning), drag-sikte
+// på spelvyn, och FIRE-knapp.
 
 export let keys;
 export let cursors;
 
-// Touch-enhet? Avgör bl.a. aim assist i weapon.js. Evalueras en gång.
+// Touch-enhet? Avgör aim assist (weapon.js) och instruktionstext (hud.js).
 export const isTouchDevice =
   typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 
 // Pekkontrollernas tillstånd. Läses av player.js precis som tangenterna.
 export const touchState = {
-  forward:   false,
-  back:      false,
-  turnLeft:  false,
-  turnRight: false,
-  anyTouch:  false,   // sätts vid varje tryck — används för spelstart
-  dragDX:    0,       // ackumulerade drag-pixlar sedan förra framen (sikte)
+  joyX:     0,       // styrplattans utslag i sidled, -1..1 (vridning)
+  joyY:     0,       // styrplattans utslag i höjdled, -1..1 (fram/back; upp = -1)
+  anyTouch: false,   // sätts vid varje tryck — används för spelstart
+  dragDX:   0,       // ackumulerade drag-pixlar sedan förra framen (sikte)
 };
 
 // Edge-flagga för FIRE: sätts en gång per nedtryckning, konsumeras av main.js.
@@ -29,7 +27,9 @@ export function initInput(scene) {
   scene.game.canvas.setAttribute('tabindex', '0');
   scene.game.canvas.focus();
 
-  initTouch();
+  initJoystick();
+  initFireButton();
+  initDragAim();
 }
 
 /** Returnerar true exakt en gång per FIRE-tryck (edge detection). */
@@ -40,30 +40,75 @@ export function consumeFireTap() {
 }
 
 // ---------------------------------------------------------------------------
-//  Pekknappar + drag-sikte
+//  Virtuell joystick — analog: utslagets riktning OCH storlek används
 // ---------------------------------------------------------------------------
-function initTouch() {
-  bindHold('btn-up',    'forward');
-  bindHold('btn-down',  'back');
-  bindHold('btn-left',  'turnLeft');
-  bindHold('btn-right', 'turnRight');
+function initJoystick() {
+  const base = document.getElementById('joystick');
+  const knob = document.getElementById('joy-knob');
+  if (!base || !knob) return;
 
-  // FIRE: edge-detekterad — ett skott per tryck
-  const fire = document.getElementById('btn-fire');
-  if (fire) {
-    fire.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      firePressed = true;
-      touchState.anyTouch = true;
-    });
-  }
+  let activeId = null;
 
-  initDragAim();
+  const updateFromPointer = e => {
+    const rect = base.getBoundingClientRect();
+    const cx = rect.left + rect.width  / 2;
+    const cy = rect.top  + rect.height / 2;
+    const maxR = rect.width / 2 - 14;   // knoppen stannar innanför kanten
+
+    let dx = e.clientX - cx;
+    let dy = e.clientY - cy;
+    const len = Math.hypot(dx, dy);
+    if (len > maxR) { dx = (dx / len) * maxR; dy = (dy / len) * maxR; }
+
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    touchState.joyX = dx / maxR;   // -1..1
+    touchState.joyY = dy / maxR;   // -1..1 (upp = negativ)
+  };
+
+  const releaseStick = () => {
+    activeId = null;
+    base.classList.remove('active');
+    knob.style.transform = 'translate(0, 0)';   // återfjädrar (CSS-transition)
+    touchState.joyX = 0;
+    touchState.joyY = 0;
+  };
+
+  base.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    activeId = e.pointerId;
+    base.classList.add('active');
+    base.setPointerCapture?.(e.pointerId);
+    touchState.anyTouch = true;
+    updateFromPointer(e);
+  });
+  base.addEventListener('pointermove', e => {
+    if (e.pointerId !== activeId) return;
+    e.preventDefault();
+    updateFromPointer(e);
+  });
+  base.addEventListener('pointerup',     e => { if (e.pointerId === activeId) releaseStick(); });
+  base.addEventListener('pointercancel', e => { if (e.pointerId === activeId) releaseStick(); });
+  base.addEventListener('contextmenu', e => e.preventDefault());
 }
 
-// Drag-för-att-sikta: dra med fingret på spelvyn för att vrida blicken.
-// Analogt och positionsbaserat — liten tumrörelse ger liten vridning.
-// Endast touch-pekare; mus på desktop påverkas inte.
+// ---------------------------------------------------------------------------
+//  FIRE-knapp
+// ---------------------------------------------------------------------------
+function initFireButton() {
+  const fire = document.getElementById('btn-fire');
+  if (!fire) return;
+  fire.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    firePressed = true;
+    touchState.anyTouch = true;
+  });
+  fire.addEventListener('contextmenu', e => e.preventDefault());
+}
+
+// ---------------------------------------------------------------------------
+//  Drag-sikte: dra med fingret på spelvyn för att vrida blicken.
+//  Endast touch-pekare; mus på desktop påverkas inte.
+// ---------------------------------------------------------------------------
 function initDragAim() {
   const surface = document.getElementById('game');
   if (!surface) return;
@@ -76,42 +121,16 @@ function initDragAim() {
     e.preventDefault();
     dragging = true;
     lastX = e.clientX;
-    touchState.anyTouch = true;          // tryck på vyn kan starta spelet
+    touchState.anyTouch = true;
     surface.setPointerCapture?.(e.pointerId);
   });
-
   surface.addEventListener('pointermove', e => {
     if (!dragging || e.pointerType !== 'touch') return;
     e.preventDefault();
-    touchState.dragDX += e.clientX - lastX;   // ackumuleras; konsumeras per frame
+    touchState.dragDX += e.clientX - lastX;
     lastX = e.clientX;
   });
-
-  const stop = e => {
-    if (e.pointerType !== 'touch') return;
-    dragging = false;
-  };
+  const stop = e => { if (e.pointerType === 'touch') dragging = false; };
   surface.addEventListener('pointerup',     stop);
   surface.addEventListener('pointercancel', stop);
-}
-
-function bindHold(id, prop) {
-  const el = document.getElementById(id);
-  if (!el) return;
-
-  const press = e => {
-    e.preventDefault();
-    el.setPointerCapture?.(e.pointerId);
-    touchState[prop]    = true;
-    touchState.anyTouch = true;
-  };
-  const release = e => {
-    e.preventDefault();
-    touchState[prop] = false;
-  };
-
-  el.addEventListener('pointerdown',   press);
-  el.addEventListener('pointerup',     release);
-  el.addEventListener('pointercancel', release);
-  el.addEventListener('contextmenu', e => e.preventDefault());
 }

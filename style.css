@@ -35,91 +35,75 @@ html, body {
 
 /* ===========================================================================
    PEKKONTROLLER
-   Dolda på desktop. Synliga på pekskärm (pointer: coarse), med två layouter:
-   - Porträtt:  spelvy upptill, kontrollpanel på egen yta under
-   - Landskap:  fullskärmsvy, halvtransparenta kontroller i nederhörnen
+   Dolda på desktop. På pekskärm (pointer: coarse) ligger de som mjuk,
+   halvtransparent overlay ovanpå spelvyn i båda orienteringarna:
+   styrplatta (virtuell joystick) till vänster, FIRE till höger.
    =========================================================================== */
 
 #touch-controls { display: none; }
 
 .tbtn {
   font-family: "Courier New", ui-monospace, monospace;
-  font-size: 22px;
   color: var(--ink);
   background: var(--btn-bg);
   border: 2px solid var(--btn-border);
-  border-radius: 10px;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
-.tbtn:active {
-  background: rgba(214, 69, 47, 0.35);
-}
 
-#dpad {
-  display: grid;
-  grid-template-areas:
-    ".    up    ."
-    "left .     right"
-    ".    down  .";
-  gap: 8px;
+/* Styrplattan: rund bas med en knopp som följer tummen */
+#joystick {
+  position: relative;
+  width: 130px; height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+              rgba(20, 18, 16, 0.30) 55%,
+              rgba(20, 18, 16, 0.55) 100%);
+  border: 2px solid rgba(214, 69, 47, 0.40);
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
 }
-#btn-up    { grid-area: up; }
-#btn-down  { grid-area: down; }
-#btn-left  { grid-area: left; }
-#btn-right { grid-area: right; }
+#joy-knob {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 52px; height: 52px;
+  margin: -26px 0 0 -26px;       /* centrerad; flyttas via transform i JS */
+  border-radius: 50%;
+  background: rgba(214, 69, 47, 0.55);
+  border: 2px solid rgba(242, 237, 230, 0.5);
+  transition: transform 0.12s ease-out;   /* mjuk återfjädring vid släpp */
+  pointer-events: none;          /* basen fångar alla pekare */
+}
+#joystick.active #joy-knob { transition: none; }   /* följ tummen direkt */
 
 #btn-fire {
+  width: 92px; height: 92px;
+  border-radius: 50%;
   color: var(--accent);
   font-weight: bold;
+  font-size: 17px;
   letter-spacing: 2px;
-  border-radius: 50%;
 }
+#btn-fire:active { background: rgba(214, 69, 47, 0.35); }
 
 @media (pointer: coarse) {
   #hud { display: none; }   /* tangentbordsinstruktioner irrelevanta */
-  #touch-controls { display: block; }
 
-  /* ---------- PORTRÄTT: spelvy upptill, kontroller under ---------- */
-  @media (orientation: portrait) {
-    #game {
-      height: 56vh;
-      align-items: flex-start;   /* canvas mot skärmens topp */
-    }
-    #touch-controls {
-      position: fixed;
-      left: 0; right: 0; bottom: 0;
-      height: 42vh;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 6vw calc(env(safe-area-inset-bottom, 0px) + 2vh);
-      box-sizing: border-box;
-    }
-    .tbtn { width: 62px; height: 62px; }
-    #btn-fire { width: 96px; height: 96px; font-size: 18px; }
-  }
+  /* Spelvyn fyller skärmen; kontrollerna flyter ovanpå */
+  #game { height: 100vh; }
 
-  /* ---------- LANDSKAP: fullskärmsvy, overlay i hörnen ---------- */
-  @media (orientation: landscape) {
-    #game { height: 100vh; }
-    #touch-controls {
-      position: fixed;
-      left: 0; right: 0; bottom: 0;
-      pointer-events: none;       /* bara knapparna fångar tryck, inte ytan */
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      padding: 0 4vw calc(env(safe-area-inset-bottom, 0px) + 3vh);
-      box-sizing: border-box;
-    }
-    .tbtn {
-      pointer-events: auto;
-      width: 54px; height: 54px;
-      opacity: 0.55;              /* halvtransparent så vyn syns igenom */
-    }
-    #btn-fire { width: 84px; height: 84px; font-size: 16px; }
+  #touch-controls {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    pointer-events: none;        /* bara plattan & FIRE fångar tryck */
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 5vw calc(env(safe-area-inset-bottom, 0px) + 3vh);
+    box-sizing: border-box;
+    opacity: 0.85;
   }
+  #joystick, #btn-fire { pointer-events: auto; }
 }
