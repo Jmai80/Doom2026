@@ -39,6 +39,9 @@ function update(_time, deltaMs) {
     if (anyKey) {
       startGame();
       if (gameMusic && !gameMusic.isPlaying) gameMusic.play();
+      // Konsumera mellanslagets JustDown-flagga — annars avlossas ett
+      // skott i samma frame som spelet startar (fasen hinner bli 'playing').
+      Phaser.Input.Keyboard.JustDown(cursors.space);
     }
   }
 

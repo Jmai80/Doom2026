@@ -64,9 +64,11 @@ function hitScan(zBuffer) {
     while (angleDiff >  Math.PI) angleDiff -= Math.PI * 2;
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
-    // Fiendens halva kroppsbredd i radianer sett från spelaren.
-    // 0.35 kartunits är ungefär streckgubbens kroppsbredd.
-    const halfWidth = Math.atan(0.35 / dist);
+    // Träffzon = bara huvudet. 0.12 kartunits matchar huvudradien i
+    // drawStickFigure (headR = h * 0.12). Eftersom skott alltid går i
+    // "ögonhöjd" (inget vertikalt sikte) blir detta en smal horisontell
+    // zon — siktet måste ligga i linje med gubbens huvud/kroppslinje.
+    const halfWidth = Math.atan(0.12 / dist);
     if (Math.abs(angleDiff) > halfWidth) return;   // missade i sidled
 
     // Skyms fienden av en vägg? Kolla zBuffer i fiendens skärmkolumn.

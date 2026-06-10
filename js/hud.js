@@ -97,7 +97,7 @@ export function updateHud() {
   lostTitle.setVisible(isLost);
   lostHint.setVisible(isLost);
   if (isLost) {
-    lostSub.setText(`${kills} AV ${totalEnemies} FIENDER NEDGJORDA`).setVisible(true);
+    lostSub.setText(`${kills} AV ${totalEnemies} FIENDER NEDSKJUTNA`).setVisible(true);
   } else {
     lostSub.setVisible(false);
   }
@@ -109,7 +109,7 @@ export function updateHud() {
   if (isWon) {
     const elapsed = (TOTAL_TIME - timeLeft).toFixed(1);
     wonTime.setText(`TID: ${elapsed} S`).setVisible(true);
-    wonSub.setText(`ALLA ${totalEnemies} FIENDER NEDGJORDA`).setVisible(true);
+    wonSub.setText(`ALLA ${totalEnemies} FIENDER NEDSKJUTNA`).setVisible(true);
   } else {
     wonTime.setVisible(false);
     wonSub.setVisible(false);
