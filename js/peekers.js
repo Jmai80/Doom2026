@@ -9,21 +9,17 @@ import { VIEW_W, VIEW_H, COL_W,
 
 const FADE_IN = 0.4;   // sekunder för fade-in vid spawn
 
-// Fem fiender — alla positioner verifierade som öppna celler (0) i MAP.
-export const peekers = [
-  { x:  7.5, y:  2.5, state: 'waiting', fadeTimer: 0, triggerDist: 7 },
-  { x:  5.5, y:  5.5, state: 'waiting', fadeTimer: 0, triggerDist: 6 },
-  { x:  3.5, y:  9.5, state: 'waiting', fadeTimer: 0, triggerDist: 6 },
-  { x: 11.5, y:  7.5, state: 'waiting', fadeTimer: 0, triggerDist: 7 },
-  { x:  9.5, y: 13.5, state: 'waiting', fadeTimer: 0, triggerDist: 6 },
-];
+// Aktiva fiender. Ägs inte längre här — laddas av levels.js via loadEnemies().
+export let peekers = [];
 
-/** Återställer alla fiender till starttillstånd. Kallas vid omstart. */
-export function resetPeekers() {
-  peekers.forEach(p => {
-    p.state     = 'waiting';
-    p.fadeTimer = 0;
-  });
+/** Skapar färska fiendeobjekt från banans definitioner. Anropas av loadLevel(). */
+export function loadEnemies(defs) {
+  peekers = defs.map(d => ({
+    x: d.x, y: d.y,
+    triggerDist: d.triggerDist,
+    state: 'waiting',
+    fadeTimer: 0,
+  }));
 }
 
 /** Uppdaterar tillstånd för alla fiender. Anropas varje frame under 'playing'. */

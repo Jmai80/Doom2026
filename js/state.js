@@ -1,13 +1,15 @@
-// Globalt speltillstånd. Importeras av hud.js, peekers.js och main.js.
-// Inga egna beroenden — övriga moduler importerar härifrån, aldrig tvärtom.
-
-export const TOTAL_TIME = 45;   // sekunder per bana
+// Globalt speltillstånd. Importeras av hud.js, main.js och levels.js.
+// Faser: 'idle' → 'playing' → ('levelclear' → 'playing' → ...) → 'won'/'lost'
 
 export const state = {
-  phase:        'idle',      // 'idle' | 'playing' | 'won' | 'lost'
-  kills:        0,
-  totalEnemies: 5,
-  timeLeft:     TOTAL_TIME,
+  phase:          'idle',
+  currentLevel:   0,
+  kills:          0,
+  totalEnemies:   0,
+  timeLeft:       0,      // sekunder kvar på aktuell bana
+  levelTimeLimit: 0,      // banans tidsgräns (sätts av loadLevel)
+  totalTime:      0,      // ackumulerad speltid över klarade banor = score
+  uiLockout:      0,      // sekunder kvar innan slut-/mellanskärm tar emot input
 };
 
 /** Kallas vid första knapptryckning — startar timern. */
@@ -16,13 +18,10 @@ export function startGame() {
   state.phase = 'playing';
 }
 
-/** Kallas när en fiende nås eller skjuts ned. */
+/** Kallas när en fiende skjuts ned. Banklarering avgörs i main.js. */
 export function registerKill() {
   if (state.phase !== 'playing') return;
   state.kills += 1;
-  if (state.kills >= state.totalEnemies) {
-    state.phase = 'won';
-  }
 }
 
 /** Uppdaterar timern. Anropas varje frame under 'playing'. */
@@ -30,13 +29,17 @@ export function updateState(dt) {
   if (state.phase !== 'playing') return;
   state.timeLeft = Math.max(0, state.timeLeft - dt);
   if (state.timeLeft === 0) {
-    state.phase = 'lost';
+    state.phase     = 'lost';
+    state.uiLockout = 2.0;   // game over-skärmen låst i 2 s
   }
 }
 
-/** Återställer till startvärden inför ny omgång. */
+/** Återställer allt inför ett helt nytt spel (från bana 1). */
 export function resetState() {
-  state.phase    = 'idle';
-  state.kills    = 0;
-  state.timeLeft = TOTAL_TIME;
+  state.phase        = 'idle';
+  state.currentLevel = 0;
+  state.kills        = 0;
+  state.totalTime    = 0;
+  state.uiLockout    = 0;
+  // timeLeft/totalEnemies/levelTimeLimit sätts av loadLevel()
 }

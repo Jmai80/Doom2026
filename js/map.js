@@ -1,27 +1,17 @@
-// Kartdata och hjälpfunktion för väggkoll.
-// 1 = vägg, 0 = öppet. Ändra siffrorna för att forma labyrinten.
+// Aktiv karta. Ägs inte längre här — sätts av levels.js via setMap().
+// MAP/MAP_W/MAP_H är live bindings: importörer (renderer m.fl.) ser
+// automatiskt den nya kartan när en bana laddas.
 
-export const MAP = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
-  [1,0,1,1,0,1,1,0,0,1,0,1,1,1,0,1],
-  [1,0,1,0,0,0,1,0,0,0,0,0,0,1,0,1],
-  [1,0,1,0,1,0,1,1,1,1,1,1,0,1,0,1],
-  [1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1],
-  [1,1,1,0,1,1,1,1,0,1,1,1,1,1,1,1],
-  [1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
-  [1,0,1,1,1,1,0,1,1,1,1,1,1,1,0,1],
-  [1,0,1,0,0,0,0,0,0,0,0,0,0,1,0,1],
-  [1,0,1,0,1,1,1,1,1,1,1,1,0,1,0,1],
-  [1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,1,1,1,0,1,1,1,1,1,1,1,1,0,1],
-  [1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
-  [1,0,1,1,1,0,0,0,1,1,1,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-];
+export let MAP   = [[1]];
+export let MAP_W = 1;
+export let MAP_H = 1;
 
-export const MAP_H = MAP.length;
-export const MAP_W  = MAP[0].length;
+/** Byter aktiv karta. Anropas av loadLevel(). */
+export function setMap(m) {
+  MAP   = m;
+  MAP_H = m.length;
+  MAP_W = m[0].length;
+}
 
 /** Returnerar true om (x, y) i kartkoordinater är en vägg eller utanför kartan. */
 export function isWall(x, y) {

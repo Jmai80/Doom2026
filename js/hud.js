@@ -1,29 +1,33 @@
-// HUD: kills-räknare, nedräkningstimer och överlayskärmar.
+// HUD: bannamn, kills, timer, totaltid och överlayskärmar.
 // Skapar Phaser Text-objekt (skalas med canvas) i stället för DOM-element.
 
-import { state, TOTAL_TIME } from './state.js';
-import { VIEW_W, VIEW_H }    from './constants.js';
+import { state }          from './state.js';
+import { LEVELS }         from './levels.js';
+import { VIEW_W, VIEW_H } from './constants.js';
 
 const FONT   = '"Courier New", monospace';
 const INK    = '#c9c4b8';
 const ACCENT = '#d6452f';
 const DIM    = '#908c86';
 
-// Phaser-objekt — skapas i initHud(), uppdateras i updateHud() varje frame.
-let killsText, timerText, idleText, overlayGfx;
+let levelText, killsText, timerText, idleText, overlayGfx;
 let lostTitle, lostSub, lostHint;
 let wonTitle, wonTime, wonSub, wonHint;
+let clearTitle, clearTime, clearTotal, clearHint;
 
 export function initHud(scene) {
   // --- Live-HUD uppe till vänster ---
-  killsText = scene.add.text(12, 12, '', {
+  levelText = scene.add.text(12, 12, '', {
+    fontFamily: FONT, fontSize: '14px', color: ACCENT,
+  });
+  killsText = scene.add.text(12, 30, '', {
     fontFamily: FONT, fontSize: '14px', color: INK,
   });
-  timerText = scene.add.text(12, 30, '', {
+  timerText = scene.add.text(12, 48, '', {
     fontFamily: FONT, fontSize: '14px', color: INK,
   });
 
-  // --- Idle-prompt i mitten — vit text med svart kontur + bakgrundsplatta ---
+  // --- Idle-prompt ---
   idleText = scene.add.text(VIEW_W / 2, VIEW_H / 2, '[ TRYCK VALFRI KNAPP ]', {
     fontFamily: FONT, fontSize: '18px', color: '#f2ede6',
     stroke: '#000000', strokeThickness: 4,
@@ -31,7 +35,6 @@ export function initHud(scene) {
     padding: { x: 14, y: 8 },
   }).setOrigin(0.5);
 
-  // --- Halvtransparent överlayyta (fylls i updateHud) ---
   overlayGfx = scene.add.graphics();
 
   // --- GAME OVER ---
@@ -44,74 +47,109 @@ export function initHud(scene) {
     fontFamily: FONT, fontSize: '16px', color: INK,
   }).setOrigin(0.5).setVisible(false);
 
-  lostHint = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 52, 'MELLANSLAG = STARTA OM', {
+  lostHint = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 52, 'MELLANSLAG / FIRE = STARTA OM', {
     fontFamily: FONT, fontSize: '15px', color: '#f2ede6',
     stroke: '#000000', strokeThickness: 4,
   }).setOrigin(0.5).setVisible(false);
 
-  // --- BANAN KLAR ---
-  wonTitle = scene.add.text(VIEW_W / 2, VIEW_H / 2 - 55, 'BANAN KLAR!', {
-    fontFamily: FONT, fontSize: '44px', color: INK,
+  // --- BANA KLAR (mellanskärm) ---
+  clearTitle = scene.add.text(VIEW_W / 2, VIEW_H / 2 - 60, '', {
+    fontFamily: FONT, fontSize: '38px', color: INK,
+    stroke: '#000000', strokeThickness: 3,
   }).setOrigin(0.5).setVisible(false);
 
-  wonTime = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 14, '', {
-    fontFamily: FONT, fontSize: '18px', color: INK,
+  clearTime = scene.add.text(VIEW_W / 2, VIEW_H / 2 - 8, '', {
+    fontFamily: FONT, fontSize: '17px', color: INK,
   }).setOrigin(0.5).setVisible(false);
 
-  wonSub = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 38, '', {
+  clearTotal = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 20, '', {
+    fontFamily: FONT, fontSize: '14px', color: DIM,
+    stroke: '#000000', strokeThickness: 3,
+  }).setOrigin(0.5).setVisible(false);
+
+  clearHint = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 58, 'MELLANSLAG / FIRE = NÄSTA BANA', {
+    fontFamily: FONT, fontSize: '15px', color: '#f2ede6',
+    stroke: '#000000', strokeThickness: 4,
+  }).setOrigin(0.5).setVisible(false);
+
+  // --- ALLA BANOR KLARA (vinstskärm) ---
+  wonTitle = scene.add.text(VIEW_W / 2, VIEW_H / 2 - 60, 'ALLA BANOR KLARA!', {
+    fontFamily: FONT, fontSize: '36px', color: INK,
+    stroke: '#000000', strokeThickness: 3,
+  }).setOrigin(0.5).setVisible(false);
+
+  wonTime = scene.add.text(VIEW_W / 2, VIEW_H / 2 - 6, '', {
+    fontFamily: FONT, fontSize: '20px', color: ACCENT,
+    stroke: '#000000', strokeThickness: 3,
+  }).setOrigin(0.5).setVisible(false);
+
+  wonSub = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 24, '', {
     fontFamily: FONT, fontSize: '13px', color: INK,
     stroke: '#000000', strokeThickness: 3,
   }).setOrigin(0.5).setVisible(false);
 
-  wonHint = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 64, 'MELLANSLAG = STARTA OM', {
+  wonHint = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 60, 'MELLANSLAG / FIRE = SPELA IGEN', {
     fontFamily: FONT, fontSize: '15px', color: '#f2ede6',
     stroke: '#000000', strokeThickness: 4,
   }).setOrigin(0.5).setVisible(false);
 }
 
 export function updateHud() {
-  const { phase, kills, totalEnemies, timeLeft } = state;
+  const { phase, kills, totalEnemies, timeLeft,
+          levelTimeLimit, totalTime, currentLevel, uiLockout } = state;
+  const unlocked = uiLockout === 0;
+  const levelName = LEVELS[currentLevel]?.name ?? '';
 
-  // --- Live kills + timer ---
+  // --- Live-HUD ---
+  levelText.setText(levelName);
   killsText.setText(`KILLS  ${kills} / ${totalEnemies}`);
   const secs = Math.ceil(timeLeft);
   timerText.setText(`TID    ${secs}S`);
-  // Timer blir röd de sista 10 sekunderna
   timerText.setColor(phase === 'playing' && secs <= 10 ? '#ff2020' : INK);
 
   const inGame = (phase === 'idle' || phase === 'playing');
+  levelText.setVisible(inGame);
   killsText.setVisible(inGame);
   timerText.setVisible(inGame);
   idleText.setVisible(phase === 'idle');
 
-  // --- Overlay ---
+  // --- Overlay-bakgrund ---
   overlayGfx.clear();
-  const showOverlay = (phase === 'won' || phase === 'lost');
-  if (showOverlay) {
+  if (phase === 'won' || phase === 'lost' || phase === 'levelclear') {
     overlayGfx.fillStyle(0x000000, 0.74);
     overlayGfx.fillRect(0, 0, VIEW_W, VIEW_H);
   }
 
-  // GAME OVER
+  // --- GAME OVER ---
   const isLost = phase === 'lost';
   lostTitle.setVisible(isLost);
-  lostHint.setVisible(isLost);
+  lostHint.setVisible(isLost && unlocked);
+  lostSub.setVisible(isLost);
   if (isLost) {
-    lostSub.setText(`${kills} AV ${totalEnemies} FIENDER NEDSKJUTNA`).setVisible(true);
-  } else {
-    lostSub.setVisible(false);
+    lostSub.setText(`${levelName}: ${kills} AV ${totalEnemies} FIENDER NEDGJORDA`);
   }
 
-  // BANAN KLAR
+  // --- BANA KLAR ---
+  const isClear = phase === 'levelclear';
+  clearTitle.setVisible(isClear);
+  clearTime.setVisible(isClear);
+  clearTotal.setVisible(isClear);
+  clearHint.setVisible(isClear && unlocked);
+  if (isClear) {
+    const levelElapsed = (levelTimeLimit - timeLeft).toFixed(1);
+    clearTitle.setText(`${levelName} KLAR!`);
+    clearTime.setText(`BANTID: ${levelElapsed} S`);
+    clearTotal.setText(`TOTALTID: ${totalTime.toFixed(1)} S`);
+  }
+
+  // --- ALLA BANOR KLARA ---
   const isWon = phase === 'won';
   wonTitle.setVisible(isWon);
-  wonHint.setVisible(isWon);
+  wonTime.setVisible(isWon);
+  wonSub.setVisible(isWon);
+  wonHint.setVisible(isWon && unlocked);
   if (isWon) {
-    const elapsed = (TOTAL_TIME - timeLeft).toFixed(1);
-    wonTime.setText(`TID: ${elapsed} S`).setVisible(true);
-    wonSub.setText(`ALLA ${totalEnemies} FIENDER NEDSKJUTNA`).setVisible(true);
-  } else {
-    wonTime.setVisible(false);
-    wonSub.setVisible(false);
+    wonTime.setText(`TOTALTID: ${totalTime.toFixed(1)} S`);
+    wonSub.setText(`${LEVELS.length} BANOR — LÄGST TID VINNER`);
   }
 }

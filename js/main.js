@@ -1,35 +1,38 @@
 // Phaser-setup och spelloop.
-
+ 
 import { VIEW_W, VIEW_H }                    from './constants.js';
 import { keys, cursors, initInput,
          touchState, consumeFireTap }        from './input.js';
 import { handleInput }                       from './player.js';
-import { updatePeekers, resetPeekers }       from './peekers.js';
+import { updatePeekers }                     from './peekers.js';
 import { initRenderer, render, zBuffer }     from './renderer.js';
 import { updateWeapon, tryShoot }            from './weapon.js';
 import { state, startGame, updateState,
          resetState }                        from './state.js';
-import { initHud, updateHud }               from './hud.js';
+import { initHud, updateHud }                from './hud.js';
+import { loadLevel, hasNextLevel }           from './levels.js';
 import Boot                                  from './Boot.js';
 import Preloader                             from './Preloader.js';
-
-let gameMusic = null;   // skapas i create(), spelas vid första knapptryckning
-
+ 
+let gameMusic = null;
+ 
 // ---------------------------------------------------------------------------
 //  Phaser scene-funktioner
 // ---------------------------------------------------------------------------
-
+ 
 function create() {
   initInput(this);
   initRenderer(this.add.graphics());
   initHud(this);
-  // Skapa ljudobjektet men starta inte — väntar på första knapptryckning.
-  gameMusic = this.sound.add('music', { loop: true, volume: 0.4 });
+  loadLevel(state.currentLevel);   // 0 vid nystart (resetState körs före restart)
+  // Phasers ljudhanterare lever på spelnivå och överlever scene.restart() —
+  // återanvänd befintlig instans, annars skapas en dubblett som spelar ovanpå.
+  gameMusic = this.sound.get('music') || this.sound.add('music', { loop: true, volume: 0.4 });
 }
-
+ 
 function update(_time, deltaMs) {
   const dt = deltaMs / 1000;
-
+ 
   // Valfri knapp/pektryck under idle → starta timer + musik
   if (state.phase === 'idle') {
     const anyKey =
@@ -41,44 +44,70 @@ function update(_time, deltaMs) {
     if (anyKey) {
       startGame();
       if (gameMusic && !gameMusic.isPlaying) gameMusic.play();
-      // Konsumera start-trycket — annars avlossas ett skott i samma frame
-      // som spelet startar (gäller både mellanslag och FIRE-knappen).
+      // Konsumera start-trycket — annars avlossas ett skott i samma frame.
       Phaser.Input.Keyboard.JustDown(cursors.space);
       consumeFireTap();
       touchState.anyTouch = false;
     }
   }
-
-  // Mellanslag eller FIRE på slutskärm → omstart. Edge-detektering krävs —
-  // annars triggar ett nedhållet skjut-tryck omstarten när sista fienden dör.
-  if ((state.phase === 'won' || state.phase === 'lost') &&
+ 
+  // Skärmlås: räkna ned, och sluka tryck som görs medan låset är aktivt —
+  // annars ligger de kvar i JustDown/fire-flaggorna och triggar direkt
+  // när låset släpper.
+  if (state.uiLockout > 0) {
+    state.uiLockout = Math.max(0, state.uiLockout - dt);
+    Phaser.Input.Keyboard.JustDown(cursors.space);
+    consumeFireTap();
+  }
+ 
+  // Banan klar → mellanslag/FIRE laddar nästa bana (när låset släppt)
+  if (state.phase === 'levelclear' && state.uiLockout === 0 &&
+      (Phaser.Input.Keyboard.JustDown(cursors.space) || consumeFireTap())) {
+    loadLevel(state.currentLevel + 1);
+    state.phase = 'playing';
+  }
+ 
+  // Slutskärm (vinst/förlust) → mellanslag/FIRE startar om (när låset släppt)
+  if ((state.phase === 'won' || state.phase === 'lost') && state.uiLockout === 0 &&
       (Phaser.Input.Keyboard.JustDown(cursors.space) || consumeFireTap())) {
     resetState();
-    resetPeekers();
-    this.scene.restart();   // kör create() igen; Phaser rensar alla scenresurser
+    this.scene.restart();   // create() körs igen och laddar bana 0
     return;
   }
-
-  // Normal spellogik — körs bara under 'playing'
+ 
+  // Normal spellogik
   if (state.phase === 'playing') {
     handleInput(dt);
     updatePeekers(dt);
     updateWeapon(dt);
-    // Mellanslag eller FIRE-knapp = skjut. Båda är edge-detekterade.
     if (Phaser.Input.Keyboard.JustDown(cursors.space) || consumeFireTap()) {
       tryShoot(this, zBuffer);
     }
     updateState(dt);
+ 
+    // Banklarering: alla fiender nere → lägg banans tid till totalen,
+    // gå till mellanskärm eller (sista banan) vinstskärm. Skärmen låses
+    // en stund så ett dubbeltryck på sista skottet inte hoppar förbi den.
+    if (state.kills >= state.totalEnemies) {
+      state.totalTime += state.levelTimeLimit - state.timeLeft;
+      if (hasNextLevel()) {
+        state.phase     = 'levelclear';
+        state.uiLockout = 1.2;
+      } else {
+        state.phase     = 'won';
+        state.uiLockout = 2.0;
+      }
+    }
   }
-
+ 
   render();
   updateHud();
 }
-
+ 
 // ---------------------------------------------------------------------------
 //  Starta spelet
 // ---------------------------------------------------------------------------
-
+ 
 new Phaser.Game({
   type: Phaser.AUTO,
   width: VIEW_W,
@@ -92,14 +121,13 @@ new Phaser.Game({
   },
   scene: [Boot, Preloader, { key: 'Game', create, update }],
 });
-
-// #game-containerns höjd ändras vid orienteringsbyte (porträtt 56vh,
-// landskap 100vh) — be Phaser mäta om och skala om canvasen.
+ 
+// #game-containerns höjd ändras vid orienteringsbyte — be Phaser mäta om.
 window.addEventListener('resize', () => {
-  // Liten fördröjning: iOS rapporterar ibland gamla mått direkt efter rotation
   setTimeout(() => window.dispatchEvent(new Event('orientationdone')), 120);
 });
 window.addEventListener('orientationdone', () => {
   const game = Phaser.GAMES?.[0];
   game?.scale.refresh();
 });
+ 

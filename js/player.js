@@ -4,12 +4,19 @@ import { keys, cursors, touchState } from './input.js';
 import { isWall }                    from './map.js';
 
 export const player = {
-  x: 1.5, y: 1.5,   // startposition — MAP[1][1] är en verifierad öppen cell
-  dir: 0,            // blickriktning i radianer
+  x: 1.5, y: 1.5,    // sätts om av resetPlayer() vid banladdning
+  dir: 0,
   moveSpeed: 3.2,    // rutor per sekund
   turnSpeed: 2.8,    // radianer per sekund
   radius: 0.18,      // krockbuffert mot väggar
 };
+
+/** Flyttar spelaren till banans startposition. Anropas av loadLevel(). */
+export function resetPlayer({ x, y, dir }) {
+  player.x   = x;
+  player.y   = y;
+  player.dir = dir;
+}
 
 /** Läser av tangenter + pekkontroller och uppdaterar spelarens position. */
 export function handleInput(dt) {
@@ -27,7 +34,6 @@ export function handleInput(dt) {
   if (keys.Q.isDown) { dx += sin; dy -= cos; }   // strafe vänster (endast tangentbord)
   if (keys.E.isDown) { dx -= sin; dy += cos; }    // strafe höger
 
-  // Normalisera så diagonal rörelse inte är snabbare
   const len = Math.hypot(dx, dy);
   if (len > 0) {
     dx = (dx / len) * player.moveSpeed * dt;
@@ -36,7 +42,6 @@ export function handleInput(dt) {
   }
 }
 
-/** Försöker flytta spelaren; kollar X och Y separat för glidning längs väggar. */
 function tryMove(dx, dy) {
   const r = player.radius;
   if (!isWall(player.x + dx + Math.sign(dx) * r, player.y)) player.x += dx;
