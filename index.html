@@ -24,6 +24,23 @@
     <button id="btn-fire" class="tbtn" aria-label="Skjut">FIRE</button>
   </div>
 
+  <!-- Vinstskärmens topplista — döljs/visas av js/highscore.js -->
+  <div id="hs-panel" hidden>
+    <div id="hs-title">ALLA BANOR KLARA!</div>
+    <div id="hs-time"></div>
+    <div id="hs-entry">
+      <input id="hs-name" maxlength="12" placeholder="DITT NAMN"
+             autocomplete="off" autocapitalize="characters">
+      <div id="hs-entry-buttons">
+        <button id="hs-submit">SKICKA</button>
+        <button id="hs-skip">HOPPA ÖVER</button>
+      </div>
+    </div>
+    <ol id="hs-list"></ol>
+    <div id="hs-status"></div>
+    <div id="hs-restart-hint" hidden>MELLANSLAG / FIRE = SPELA IGEN</div>
+  </div>
+
   <!-- type="module" aktiverar ES-moduler; Phaser-global är redan laddad -->
   <script type="module" src="./js/main.js"></script>
 </body>

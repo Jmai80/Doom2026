@@ -17,6 +17,7 @@ import Preloader                             from './Preloader.js';
 let gameMusic = null;
 let heartbeat = null;   // loopas över nedpitchad musik under bossfasen
 let prevBossAlive = false;   // för att detektera bossens spawnögonblick
+let prevPhase = 'idle';      // för att detektera vinstögonblicket
 
 // ---------------------------------------------------------------------------
 //  Phaser scene-funktioner
@@ -31,6 +32,11 @@ function create() {
   // återanvänd befintlig instans, annars skapas en dubblett som spelar ovanpå.
   gameMusic = this.sound.get('music') || this.sound.add('music', { loop: true, volume: 0.4 });
   heartbeat = this.sound.get('heartbeat') || this.sound.add('heartbeat', { loop: true, volume: 1.0 });
+
+  // Hämta nuvarande rekord till startskärmen — får tyst misslyckas offline
+  fetchTop(1)
+    .then(rows => setIdleRecord(rows[0] ?? null))
+    .catch(() => setIdleRecord(null));
 }
 
 function update(_time, deltaMs) {
@@ -72,7 +78,9 @@ function update(_time, deltaMs) {
 
   // Slutskärm (vinst/förlust) → mellanslag/FIRE startar om (när låset släppt)
   if ((state.phase === 'won' || state.phase === 'lost') && state.uiLockout === 0 &&
+      !isNameEntryOpen() &&
       (Phaser.Input.Keyboard.JustDown(cursors.space) || consumeFireTap())) {
+    hideWinPanel();
     resetState();
     this.scene.restart();   // create() körs igen och laddar bana 0
     return;
@@ -122,6 +130,12 @@ function update(_time, deltaMs) {
     if (bossAlive  && !heartbeat.isPlaying) heartbeat.play();
     if (!bossAlive &&  heartbeat.isPlaying) heartbeat.stop();
   }
+
+  // Vinstögonblicket: öppna topplistepanelen exakt en gång
+  if (state.phase === 'won' && prevPhase !== 'won') {
+    showWinPanel(this, state.totalTime);
+  }
+  prevPhase = state.phase;
 
   render();
   updateHud();

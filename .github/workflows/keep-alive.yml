@@ -24,7 +24,7 @@ jobs:
       - name: Ping Supabase
         run: |
           curl --silent --fail --show-error \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/highscores?select=id&limit=1" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/doomhighscores?select=id&limit=1" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             > /dev/null
           echo "Supabase pingad: $(date -u '+%Y-%m-%d %H:%M UTC')"

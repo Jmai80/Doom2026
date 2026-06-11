@@ -14,7 +14,7 @@ const DIM    = '#908c86';
 let levelText, killsText, timerText, idleText, idleTouchHint, overlayGfx;
 let bossText;
 let lostTitle, lostSub, lostHint;
-let wonTitle, wonTime, wonSub, wonHint;
+let idleRecord;
 let clearTitle, clearTime, clearTotal, clearHint;
 
 export function initHud(scene) {
@@ -90,25 +90,13 @@ export function initHud(scene) {
     stroke: '#000000', strokeThickness: 4,
   }).setOrigin(0.5).setVisible(false);
 
-  // --- ALLA BANOR KLARA (vinstskärm) ---
-  wonTitle = scene.add.text(VIEW_W / 2, VIEW_H / 2 - 60, 'ALLA BANOR KLARA!', {
-    fontFamily: FONT, fontSize: '36px', color: INK,
-    stroke: '#000000', strokeThickness: 3,
-  }).setOrigin(0.5).setVisible(false);
+  // Vinstskärmen ritas numera av HTML-panelen i highscore.js —
+  // hud:en behåller bara den mörka overlay-bakgrunden för 'won'.
 
-  wonTime = scene.add.text(VIEW_W / 2, VIEW_H / 2 - 6, '', {
-    fontFamily: FONT, fontSize: '20px', color: ACCENT,
+  // Rekordraden på startskärmen (fylls i av setIdleRecord när fetch svarat)
+  idleRecord = scene.add.text(VIEW_W / 2, VIEW_H / 2 - 46, '', {
+    fontFamily: FONT, fontSize: '13px', color: ACCENT,
     stroke: '#000000', strokeThickness: 3,
-  }).setOrigin(0.5).setVisible(false);
-
-  wonSub = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 24, '', {
-    fontFamily: FONT, fontSize: '13px', color: INK,
-    stroke: '#000000', strokeThickness: 3,
-  }).setOrigin(0.5).setVisible(false);
-
-  wonHint = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 60, 'MELLANSLAG / FIRE = SPELA IGEN', {
-    fontFamily: FONT, fontSize: '15px', color: '#f2ede6',
-    stroke: '#000000', strokeThickness: 4,
   }).setOrigin(0.5).setVisible(false);
 }
 
@@ -131,6 +119,7 @@ export function updateHud() {
   timerText.setVisible(inGame);
   idleText.setVisible(phase === 'idle');
   idleTouchHint.setVisible(phase === 'idle' && isTouchDevice);
+  idleRecord.setVisible(phase === 'idle' && idleRecord.text !== '');
 
   // Bossutrop: synlig medan timern lever, tonar ut sista halvsekunden
   if (state.bossAnnounce > 0 && phase === 'playing') {
@@ -169,14 +158,12 @@ export function updateHud() {
     clearTotal.setText(`TOTALTID: ${totalTime.toFixed(1)} S`);
   }
 
-  // --- ALLA BANOR KLARA ---
-  const isWon = phase === 'won';
-  wonTitle.setVisible(isWon);
-  wonTime.setVisible(isWon);
-  wonSub.setVisible(isWon);
-  wonHint.setVisible(isWon && unlocked);
-  if (isWon) {
-    wonTime.setText(`TOTALTID: ${totalTime.toFixed(1)} S`);
-    wonSub.setText(`${LEVELS.length} BANOR — LÄGST TID VINNER`);
-  }
+}
+
+/** Sätter rekordraden på startskärmen. row = {name, total_time} eller null. */
+export function setIdleRecord(row) {
+  if (!idleRecord) return;
+  idleRecord.setText(
+    row ? `REKORD: ${Number(row.total_time).toFixed(1)} S — ${String(row.name).toUpperCase()}` : ''
+  );
 }
