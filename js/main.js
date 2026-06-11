@@ -4,7 +4,7 @@ import { VIEW_W, VIEW_H }                    from './constants.js';
 import { keys, cursors, initInput,
          touchState, consumeFireTap }        from './input.js';
 import { handleInput }                       from './player.js';
-import { updatePeekers }                     from './peekers.js';
+import { updatePeekers, peekers }            from './peekers.js';
 import { initRenderer, render, zBuffer }     from './renderer.js';
 import { updateWeapon, tryShoot }            from './weapon.js';
 import { state, startGame, updateState,
@@ -15,6 +15,8 @@ import Boot                                  from './Boot.js';
 import Preloader                             from './Preloader.js';
 
 let gameMusic = null;
+let heartbeat = null;   // loopas över nedpitchad musik under bossfasen
+let prevBossAlive = false;   // för att detektera bossens spawnögonblick
 
 // ---------------------------------------------------------------------------
 //  Phaser scene-funktioner
@@ -28,6 +30,7 @@ function create() {
   // Phasers ljudhanterare lever på spelnivå och överlever scene.restart() —
   // återanvänd befintlig instans, annars skapas en dubblett som spelar ovanpå.
   gameMusic = this.sound.get('music') || this.sound.add('music', { loop: true, volume: 0.4 });
+  heartbeat = this.sound.get('heartbeat') || this.sound.add('heartbeat', { loop: true, volume: 1.0 });
 }
 
 function update(_time, deltaMs) {
@@ -98,6 +101,26 @@ function update(_time, deltaMs) {
         state.uiLockout = 2.0;
       }
     }
+  }
+
+  // Bossfas-ljud: nedpitchad & dämpad musik + hjärtslag medan bossen lever.
+  // Ligger utanför playing-blocket så allt återställs även vid game over
+  // med bossen vid liv, eller vid banbyte.
+  const bossAlive = state.phase === 'playing' &&
+                    peekers.some(p => p.boss && p.state === 'active');
+  if (bossAlive && !prevBossAlive) {
+    state.bossAnnounce = 1.6;
+  }
+  prevBossAlive = bossAlive;
+  if (gameMusic) {
+    const targetRate = bossAlive ? 0.78 : 1;
+    const targetVol  = bossAlive ? 0.08 : 0.4;   // duckas hårt under hjärtslagen
+    if (gameMusic.rate   !== targetRate) gameMusic.setRate(targetRate);
+    if (gameMusic.volume !== targetVol)  gameMusic.setVolume(targetVol);
+  }
+  if (heartbeat) {
+    if (bossAlive  && !heartbeat.isPlaying) heartbeat.play();
+    if (!bossAlive &&  heartbeat.isPlaying) heartbeat.stop();
   }
 
   render();

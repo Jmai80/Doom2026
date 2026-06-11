@@ -20,6 +20,7 @@ export default class Preloader extends Phaser.Scene {
     this.load.audio('music', 'assets/Doom2026Music.mp3');
     this.load.audio('shoot', 'assets/shoot.mp3');
     this.load.audio('ouch',  'assets/ouch.mp3');
+    this.load.audio('heartbeat', 'assets/heartbeat.mp3');
   }
 
   create() {

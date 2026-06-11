@@ -1,0 +1,30 @@
+# Håller Supabase-projektet vaket: gratisprojekt pausas efter ~1 veckas
+# inaktivitet, men varje API-anrop räknas som aktivitet. Den här workflown
+# gör ett minimalt läsanrop mot highscores-tabellen två gånger i veckan.
+#
+# Kräver två repository secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL       = https://<ditt-projekt>.supabase.co
+#   SUPABASE_ANON_KEY  = publishable-nyckeln (sb_publishable_...) eller
+#                        legacy anon-nyckeln — båda fungerar med apikey-headern
+
+name: Supabase keep-alive
+
+on:
+  schedule:
+    # Måndag och torsdag 06:17 UTC. Udda minuttal är avsiktligt —
+    # GitHub kan skjuta upp jobb schemalagda på jämna heltimmar pga trängsel.
+    - cron: "17 6 * * 1,4"
+  # Gör att workflown kan köras manuellt från Actions-fliken (bra för test)
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        run: |
+          curl --silent --fail --show-error \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/highscores?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            > /dev/null
+          echo "Supabase pingad: $(date -u '+%Y-%m-%d %H:%M UTC')"

@@ -12,6 +12,7 @@ const ACCENT = '#d6452f';
 const DIM    = '#908c86';
 
 let levelText, killsText, timerText, idleText, idleTouchHint, overlayGfx;
+let bossText;
 let lostTitle, lostSub, lostHint;
 let wonTitle, wonTime, wonSub, wonHint;
 let clearTitle, clearTime, clearTotal, clearHint;
@@ -45,6 +46,12 @@ export function initHud(scene) {
       stroke: '#000000', strokeThickness: 3,
     }
   ).setOrigin(0.5).setVisible(false);
+
+  // "BOSSEN ÄR HÄR" — blinkar fram när bossen spawnar
+  bossText = scene.add.text(VIEW_W / 2, VIEW_H * 0.30, 'BOSSEN ÄR HÄR', {
+    fontFamily: FONT, fontSize: '34px', color: ACCENT,
+    stroke: '#000000', strokeThickness: 5,
+  }).setOrigin(0.5).setVisible(false);
 
   overlayGfx = scene.add.graphics();
 
@@ -124,6 +131,14 @@ export function updateHud() {
   timerText.setVisible(inGame);
   idleText.setVisible(phase === 'idle');
   idleTouchHint.setVisible(phase === 'idle' && isTouchDevice);
+
+  // Bossutrop: synlig medan timern lever, tonar ut sista halvsekunden
+  if (state.bossAnnounce > 0 && phase === 'playing') {
+    bossText.setVisible(true);
+    bossText.setAlpha(Math.min(1, state.bossAnnounce / 0.5));
+  } else {
+    bossText.setVisible(false);
+  }
 
   // --- Overlay-bakgrund ---
   overlayGfx.clear();

@@ -11,6 +11,7 @@ export const state = {
   totalTime:      0,      // ackumulerad speltid över klarade banor = score
   uiLockout:      0,      // sekunder kvar innan slut-/mellanskärm tar emot input
   hitFlash:       0,      // sekunder kvar av röd skadeblixt (sätts av stealTime)
+  bossAnnounce:   0,      // sekunder kvar av "BOSSEN ÄR HÄR"-utropet
 };
 
 /** Kallas vid första knapptryckning — startar timern. */
@@ -35,7 +36,8 @@ export function stealTime(seconds) {
 
 /** Uppdaterar timern. Anropas varje frame under 'playing'. */
 export function updateState(dt) {
-  state.hitFlash = Math.max(0, state.hitFlash - dt);
+  state.hitFlash     = Math.max(0, state.hitFlash - dt);
+  state.bossAnnounce = Math.max(0, state.bossAnnounce - dt);
   if (state.phase !== 'playing') return;
   state.timeLeft = Math.max(0, state.timeLeft - dt);
   if (state.timeLeft === 0) {
@@ -52,5 +54,6 @@ export function resetState() {
   state.totalTime    = 0;
   state.uiLockout    = 0;
   state.hitFlash     = 0;
+  state.bossAnnounce = 0;
   // timeLeft/totalEnemies/levelTimeLimit sätts av loadLevel()
 }

@@ -12,7 +12,6 @@ import { VIEW_W, VIEW_H, COL_W,
 
 const FADE_IN    = 0.4;    // s: fade-in vid spawn
 const DEATH_TIME = 0.5;    // s: fallanimation innan 'gone'
-const SWAY_AMP   = 0.5;    // kartunits: hur långt dockorna glider åt varje håll
 const BOSS_AIM   = 0.7;    // s: bossens telegrafering innan skottet
 const BOSS_COOLDOWN = 2.6; // s: mellan bosskott
 const BOSS_DAMAGE   = 3;   // sekunder som stjäls per träff
@@ -34,6 +33,7 @@ export function loadEnemies(defs) {
     swayT: i * 1.7,
     swaySpeed: 1.2 + (i % 3) * 0.35,
     swayAxis: null,
+    swayAmp: 0,        // sätts av pickSwayAxis vid aktivering
     // Boss-fält
     aimTimer: 0,
     fireCooldown: 1.5,                 // liten frist innan första skottet
@@ -48,12 +48,19 @@ export function updatePeekers(dt, scene) {
     const dist = Math.hypot(p.x - player.x, p.y - player.y);
 
     if (p.state === 'waiting') {
-      // Bossen är banans final: den vaknar först när alla vanliga
-      // fiender är nedskjutna (dying räknas som nedskjuten).
-      const bossBlocked = p.boss && !peekers.every(
-        q => q.boss || q.state === 'dying' || q.state === 'gone'
-      );
-      if (!bossBlocked && dist < p.triggerDist) {
+      if (p.boss) {
+        // Bossen spawnar OMEDELBART när sista vanliga fienden skjutits —
+        // inget närhetskrav, så spelaren slipper leta för att trigga den.
+        // Minimappens stora markör visar var den väntar.
+        const othersDown = peekers.every(
+          q => q.boss || q.state === 'dying' || q.state === 'gone'
+        );
+        if (othersDown) {
+          p.state     = 'active';
+          p.fadeTimer = 0;
+          p.swayAxis  = pickSwayAxis(p);
+        }
+      } else if (dist < p.triggerDist) {
         p.state     = 'active';
         p.fadeTimer = 0;
         p.swayAxis  = pickSwayAxis(p);
@@ -81,14 +88,29 @@ export function killPeeker(p) {
 //  Sidledsrörelse — skjutbanedockor
 // ---------------------------------------------------------------------------
 
-// Välj glidaxel: x om utrymmet åt båda håll är fritt, annars y, annars stilla.
+// Adaptiv glidamplitud: prova fallande amplituder och returnera den största
+// som får plats längs axeln (0 = inget utrymme alls).
+function axisAmp(p, axis) {
+  const m = 0.15;   // marginal utöver amplituden
+  for (const a of [0.5, 0.4, 0.3, 0.2]) {
+    const r = a + m;
+    const free = axis === 'x'
+      ? !isWall(p.anchorX - r, p.anchorY) && !isWall(p.anchorX + r, p.anchorY)
+      : !isWall(p.anchorX, p.anchorY - r) && !isWall(p.anchorX, p.anchorY + r);
+    if (free) return a;
+  }
+  return 0;
+}
+
+// Välj den axel som ger störst glidutrymme. Sätter även p.swayAmp.
+// Bara fiender helt inklämda åt alla håll blir stillastående.
 function pickSwayAxis(p) {
-  const m = 0.25;   // marginal utöver amplituden
-  if (!isWall(p.anchorX - SWAY_AMP - m, p.anchorY) &&
-      !isWall(p.anchorX + SWAY_AMP + m, p.anchorY)) return 'x';
-  if (!isWall(p.anchorX, p.anchorY - SWAY_AMP - m) &&
-      !isWall(p.anchorX, p.anchorY + SWAY_AMP + m)) return 'y';
-  return null;
+  const ax = axisAmp(p, 'x');
+  const ay = axisAmp(p, 'y');
+  if (ax === 0 && ay === 0) { p.swayAmp = 0; return null; }
+  if (ax >= ay) { p.swayAmp = ax; return 'x'; }
+  p.swayAmp = ay;
+  return 'y';
 }
 
 function updateSway(p, dt) {
@@ -97,7 +119,7 @@ function updateSway(p, dt) {
   if (p.boss && p.aimTimer > 0) return;
 
   p.swayT += dt * p.swaySpeed;
-  const offset = Math.sin(p.swayT) * SWAY_AMP;
+  const offset = Math.sin(p.swayT) * p.swayAmp;
   const nx = p.swayAxis === 'x' ? p.anchorX + offset : p.anchorX;
   const ny = p.swayAxis === 'y' ? p.anchorY + offset : p.anchorY;
   // Säkerhetskoll — rör dig bara om målcellen är öppen
@@ -190,7 +212,6 @@ function drawStickFigure(gfx, cx, cy, h, alpha, p, fallT) {
   const footY = cy + h * 0.42;
 
   // Dödsanimation: rotera hela figuren kring fotpunkten, 0 → 90°.
-  // Phaser Graphics stödjer canvas-transformer (save/translate/rotate/restore).
   gfx.save();
   gfx.translateCanvas(cx, footY);
   gfx.rotateCanvas(fallT * Math.PI / 2);
@@ -200,22 +221,39 @@ function drawStickFigure(gfx, cx, cy, h, alpha, p, fallT) {
   const headY  = cy - h * 0.22;
   const neckY  = headY + headR;
   const waistY = cy + h * 0.10;
-  const armY   = neckY + (waistY - neckY) * 0.4;
-  const armX   = h * 0.20;
-  const legX   = h * 0.13;
   let   lw     = Math.max(1.5, h * 0.045);
 
-  // Bossen är omisskännlig: röd kropp, grövre linjer, horn på huvudet.
   const bodyColor = p.boss ? 0xd6452f : 0xf2ede6;
   if (p.boss) lw *= 1.6;
 
-  // Glöd bakom huvudet: orange för vanliga, röd för boss —
-  // och under telegrafering pulserar bossens glöd kraftigt.
+  // --- Gånganimation -------------------------------------------------------
+  // Benen/armarna svänger i takt med sidledsglidet. speedFactor följer
+  // glidets faktiska hastighet (derivatan av sin är cos) så stegen
+  // saktar in naturligt i vändlägena där dockan momentant står stilla.
+  const aiming = p.boss && p.aimTimer > 0;
+  const moving = p.swayAxis !== null && !aiming && p.state === 'active';
+  const speedFactor = moving ? Math.abs(Math.cos(p.swayT)) : 0;
+  const walkPhase   = p.swayT * 3;                     // stegtakt > glidtakt
+  const swing       = Math.sin(walkPhase) * 0.55 * speedFactor;
+
+  const legLen = footY - waistY;
+  const armLen = h * 0.26;
+  const shoulderY = neckY + (waistY - neckY) * 0.15;
+
+  // Vinklar från lodrätt: vilospridning ± gångsvängning
+  const leg1 =  0.22 + swing;
+  const leg2 = -0.22 - swing;
+  // Armar i motfas mot benen (naturlig gång). Boss som siktar: armarna upp.
+  let arm1 =  0.15 - swing * 0.8;
+  let arm2 = -0.15 + swing * 0.8;
+  if (aiming) { arm1 = 1.9; arm2 = -1.9; }             // höjda armar = telegraf
+
+  // --- Glöd ----------------------------------------------------------------
   let glowColor = 0xff8844, glowAlpha = alpha * 0.22, glowExtra = 3;
   if (p.boss) {
     glowColor = 0xff2020;
     glowAlpha = alpha * 0.35;
-    if (p.aimTimer > 0) {
+    if (aiming) {
       const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 60);
       glowAlpha = alpha * (0.4 + 0.5 * pulse);
       glowExtra = 5 + 3 * pulse;
@@ -224,12 +262,41 @@ function drawStickFigure(gfx, cx, cy, h, alpha, p, fallT) {
   gfx.lineStyle(lw + glowExtra, glowColor, glowAlpha);
   gfx.strokeCircle(cx, headY, headR + glowExtra);
 
+  // --- Huvud ---------------------------------------------------------------
   gfx.fillStyle(bodyColor, alpha);
   gfx.fillCircle(cx, headY, headR);
 
+  // --- Surt ansikte: ögon, arga ögonbryn, nedåtböjd mun --------------------
+  // Mörkt mot ljus kropp, ljust mot bossens röda
+  const faceColor = p.boss ? 0x1a0a08 : 0x14110e;
+  const eyeR  = Math.max(0.8, headR * 0.14);
+  const eyeDX = headR * 0.38;
+  const eyeY  = headY - headR * 0.12;
+  gfx.fillStyle(faceColor, alpha);
+  gfx.fillCircle(cx - eyeDX, eyeY, eyeR);
+  gfx.fillCircle(cx + eyeDX, eyeY, eyeR);
+
+  const faceLw = Math.max(1, headR * 0.13);
+  gfx.lineStyle(faceLw, faceColor, alpha);
+
+  // Ögonbryn: \ / — vinklade inåt-nedåt för surhet
+  gfx.beginPath();
+  gfx.moveTo(cx - eyeDX - headR * 0.25, eyeY - headR * 0.42);
+  gfx.lineTo(cx - eyeDX + headR * 0.18, eyeY - headR * 0.20);
+  gfx.moveTo(cx + eyeDX + headR * 0.25, eyeY - headR * 0.42);
+  gfx.lineTo(cx + eyeDX - headR * 0.18, eyeY - headR * 0.20);
+  gfx.strokePath();
+
+  // Mun: båge som buktar uppåt (∩) = klassisk sur min
+  const mouthR = headR * 0.42;
+  gfx.beginPath();
+  gfx.arc(cx, headY + headR * 0.78, mouthR, Math.PI * 1.22, Math.PI * 1.78);
+  gfx.strokePath();
+
+  // --- Kropp och lemmar ----------------------------------------------------
   gfx.lineStyle(lw, bodyColor, alpha);
 
-  // Horn — två korta streck snett uppåt från huvudet (endast boss)
+  // Horn (endast boss)
   if (p.boss) {
     gfx.beginPath();
     gfx.moveTo(cx - headR * 0.6, headY - headR * 0.7);
@@ -239,20 +306,26 @@ function drawStickFigure(gfx, cx, cy, h, alpha, p, fallT) {
     gfx.strokePath();
   }
 
+  // Kropp
   gfx.beginPath();
-  gfx.moveTo(cx, neckY);      gfx.lineTo(cx, waistY);
+  gfx.moveTo(cx, neckY);
+  gfx.lineTo(cx, waistY);
   gfx.strokePath();
 
+  // Armar — svänger i motfas mot benen (vinkel 0 = rakt ned)
   gfx.beginPath();
-  gfx.moveTo(cx - armX, armY); gfx.lineTo(cx + armX, armY);
+  gfx.moveTo(cx, shoulderY);
+  gfx.lineTo(cx + Math.sin(arm1) * armLen, shoulderY + Math.cos(arm1) * armLen);
+  gfx.moveTo(cx, shoulderY);
+  gfx.lineTo(cx + Math.sin(arm2) * armLen, shoulderY + Math.cos(arm2) * armLen);
   gfx.strokePath();
 
+  // Ben
   gfx.beginPath();
-  gfx.moveTo(cx, waistY);     gfx.lineTo(cx - legX, footY);
-  gfx.strokePath();
-
-  gfx.beginPath();
-  gfx.moveTo(cx, waistY);     gfx.lineTo(cx + legX, footY);
+  gfx.moveTo(cx, waistY);
+  gfx.lineTo(cx + Math.sin(leg1) * legLen, waistY + Math.cos(leg1) * legLen);
+  gfx.moveTo(cx, waistY);
+  gfx.lineTo(cx + Math.sin(leg2) * legLen, waistY + Math.cos(leg2) * legLen);
   gfx.strokePath();
 
   gfx.restore();
