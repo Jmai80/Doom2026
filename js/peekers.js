@@ -82,6 +82,27 @@ export function updatePeekers(dt, scene) {
   });
 }
 
+/**
+ * Sticky aim-stöd: true om siktet ligger nära en aktiv fiende.
+ * main.js sänker vridkänsligheten på touch-enheter när detta är sant,
+ * så att siktet "fastnar" lite på målet i stället för att svepa förbi.
+ */
+export function nearAimTarget() {
+  for (const p of peekers) {
+    if (p.state !== 'active') continue;
+    const dx = p.x - player.x;
+    const dy = p.y - player.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 0.1 || dist > 14) continue;
+    let a = Math.atan2(dy, dx) - player.dir;
+    while (a >  Math.PI) a -= Math.PI * 2;
+    while (a < -Math.PI) a += Math.PI * 2;
+    // Något bredare zon än träffzonen — inbromsningen ska börja strax innan
+    if (Math.abs(a) < Math.atan(0.45 / dist)) return true;
+  }
+  return false;
+}
+
 /** Skjuten fiende: starta dödsanimationen. Anropas av weapon.js. */
 export function killPeeker(p) {
   p.state      = 'dying';

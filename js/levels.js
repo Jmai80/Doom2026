@@ -86,7 +86,7 @@ export const LEVELS = [
   // mittrum. Tätare dimma och snabbare fiender — finalen.
   {
     name: 'BANA 3',
-    timeLimit: 70,       // spiralens gångavstånd kräver marginal
+    timeLimit: 100,      // spiralens gångavstånd + dimman kräver rejäl marginal
     walls: { side0: 0xc94f38, side1: 0xe06a4e },   // röd — nu är det allvar
     fogDist: 8,          // lätt dimökning — spiralen är huvudutmaningen
     swayFactor: 1.15,    // mild fartökning; den stora kommer senare

@@ -18,19 +18,23 @@ export function resetPlayer({ x, y, dir }) {
   player.dir = dir;
 }
 
-/** Läser av tangenter + pekkontroller och uppdaterar spelarens position. */
-export function handleInput(dt) {
+/**
+ * Läser av tangenter + pekkontroller och uppdaterar spelarens position.
+ * aimSlow < 1 = sticky aim: all vridning dämpas (sätts av main.js på touch
+ * när siktet är nära en fiende).
+ */
+export function handleInput(dt, aimSlow = 1) {
   // --- Vridning: tangenter är binära (-1/0/1), joystickens x är analog ---
   let turn = 0;
   if (keys.A.isDown || cursors.left.isDown)  turn -= 1;
   if (keys.D.isDown || cursors.right.isDown) turn += 1;
   turn += touchState.joyX;
   turn = Math.max(-1, Math.min(1, turn));
-  player.dir += turn * player.turnSpeed * dt;
+  player.dir += turn * player.turnSpeed * dt * aimSlow;
 
   // Drag-sikte (touch): positionsbaserat, appliceras rått utan dt.
   if (touchState.dragDX !== 0) {
-    player.dir += touchState.dragDX * 0.005;
+    player.dir += touchState.dragDX * 0.005 * aimSlow;
     touchState.dragDX = 0;
   }
 

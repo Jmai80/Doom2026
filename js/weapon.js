@@ -67,7 +67,7 @@ function hitScan(zBuffer, scene) {
 
     // Träffzon: huvudbredd på desktop (0.12), breddad till 0.20 på touch —
     // klassisk aim assist som kompenserar pekskärmens lägre siktprecision.
-    const hitRadius = isTouchDevice ? 0.20 : 0.12;
+    const hitRadius = isTouchDevice ? 0.28 : 0.12;
     const halfWidth = Math.atan(hitRadius / dist);
     if (Math.abs(angleDiff) > halfWidth) return;   // missade i sidled
 
