@@ -6,6 +6,7 @@ import { player }              from './player.js';
 import { peekers, renderPeekers } from './peekers.js';
 import { weapon }              from './weapon.js';
 import { state }               from './state.js';
+import { LEVELS }              from './levels.js';
 
 let gfx;
 // Djupbuffert: ett vinkelrätt väggavstånd per strålekolumn.
@@ -106,10 +107,12 @@ function castRay(angle) {
   return { dist: Math.max(dist, 0.0001), side };
 }
 
-/** Beräknar väggfärgen baserat på sida och avstånd (dimma). */
+/** Beräknar väggfärgen: banans palett + avståndsdimma (banans fogDist). */
 function shade(side, dist) {
-  const base = side === 0 ? 0xc94f38 : 0xe06a4e;
-  const fog  = Math.max(0, 1 - dist / 10);
+  const lv   = LEVELS[state.currentLevel] ?? {};
+  const pal  = lv.walls ?? { side0: 0xc94f38, side1: 0xe06a4e };
+  const base = side === 0 ? pal.side0 : pal.side1;
+  const fog  = Math.max(0, 1 - dist / (lv.fogDist ?? 10));
   const r = Math.round(((base >> 16) & 0xff) * fog);
   const g = Math.round(((base >> 8)  & 0xff) * fog);
   const b = Math.round(( base        & 0xff) * fog);

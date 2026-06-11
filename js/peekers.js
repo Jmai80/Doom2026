@@ -19,19 +19,23 @@ const BOSS_DAMAGE   = 3;   // sekunder som stjäls per träff
 export let peekers = [];
 
 /** Skapar färska fiendeobjekt från banans definitioner. Anropas av loadLevel(). */
-export function loadEnemies(defs) {
+export function loadEnemies(defs, swayFactor = 1) {
   peekers = defs.map((d, i) => ({
     x: d.x, y: d.y,
     anchorX: d.x, anchorY: d.y,        // mittpunkt för sidledsglidet
     triggerDist: d.triggerDist,
     boss: !!d.boss,
+    // Valfria per-boss-värden från bandatan (faller tillbaka på konstanterna)
+    aimTime:      d.aimTime,
+    cooldownTime: d.cooldownTime,
+    damage:       d.damage,
     state: 'waiting',
     fadeTimer: 0,
     deathTimer: 0,
     // Sidledsrörelse: fas och hastighet varieras per fiende så de inte
     // rör sig i takt. Axeln (x eller y) avgörs vid spawn utifrån fritt utrymme.
     swayT: i * 1.7,
-    swaySpeed: 1.2 + (i % 3) * 0.35,
+    swaySpeed: (1.2 + (i % 3) * 0.35) * swayFactor,
     swayAxis: null,
     swayAmp: 0,        // sätts av pickSwayAxis vid aktivering
     // Boss-fält
@@ -137,16 +141,16 @@ function updateBoss(p, dt, dist, scene) {
     // Telegrafering pågår — avfyra när den löper ut
     p.aimTimer -= dt;
     if (p.aimTimer <= 0) {
-      p.fireCooldown = BOSS_COOLDOWN;
+      p.fireCooldown = p.cooldownTime ?? BOSS_COOLDOWN;
       // Träff bara om spelaren fortfarande är i fri siktlinje —
       // att bryta siktlinjen bakom en vägg är spelarens försvar.
       if (hasLineOfSight(p)) {
-        stealTime(BOSS_DAMAGE);
+        stealTime(p.damage ?? BOSS_DAMAGE);
         scene?.sound.play('shoot', { volume: 0.45, rate: 0.55 });   // mörkare ton
       }
     }
   } else if (p.fireCooldown === 0 && dist < p.triggerDist + 2 && hasLineOfSight(p)) {
-    p.aimTimer = BOSS_AIM;   // börja sikta — glöden pulserar rött (se render)
+    p.aimTimer = p.aimTime ?? BOSS_AIM;   // börja sikta — glöden pulserar rött (se render)
   }
 }
 
