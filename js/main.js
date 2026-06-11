@@ -9,7 +9,9 @@ import { initRenderer, render, zBuffer }     from './renderer.js';
 import { updateWeapon, tryShoot }            from './weapon.js';
 import { state, startGame, updateState,
          resetState }                        from './state.js';
-import { initHud, updateHud }                from './hud.js';
+import { initHud, updateHud, setIdleRecord } from './hud.js';
+import { showWinPanel, hideWinPanel,
+         isNameEntryOpen, fetchTop }         from './highscore.js';
 import { loadLevel, hasNextLevel }           from './levels.js';
 import Boot                                  from './Boot.js';
 import Preloader                             from './Preloader.js';
