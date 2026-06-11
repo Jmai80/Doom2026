@@ -204,3 +204,4 @@ html, body {
   color: #f2ede6;
 }
 #hs-restart-hint[hidden] { display: none; }
+.hs-kills { color: #f2ede6; min-width: 36px; text-align: right; }

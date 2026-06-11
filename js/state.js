@@ -4,7 +4,8 @@
 export const state = {
   phase:          'idle',
   currentLevel:   0,
-  kills:          0,
+  kills:          0,      // kills på aktuell bana (nollställs per bana)
+  runKills:       0,      // kills över hela rundan — highscorets primärnyckel
   totalEnemies:   0,
   timeLeft:       0,      // sekunder kvar på aktuell bana
   levelTimeLimit: 0,      // banans tidsgräns (sätts av loadLevel)
@@ -23,7 +24,8 @@ export function startGame() {
 /** Kallas när en fiende skjuts ned. Banklarering avgörs i main.js. */
 export function registerKill() {
   if (state.phase !== 'playing') return;
-  state.kills += 1;
+  state.kills    += 1;
+  state.runKills += 1;
 }
 
 /** Bossträff: stjäl sekunder från timern och trigga röd skärmblixt. */
@@ -51,6 +53,7 @@ export function resetState() {
   state.phase        = 'idle';
   state.currentLevel = 0;
   state.kills        = 0;
+  state.runKills     = 0;
   state.totalTime    = 0;
   state.uiLockout    = 0;
   state.hitFlash     = 0;

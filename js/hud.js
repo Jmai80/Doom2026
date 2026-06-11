@@ -13,7 +13,6 @@ const DIM    = '#908c86';
 
 let levelText, killsText, timerText, idleText, idleTouchHint, overlayGfx;
 let bossText;
-let lostTitle, lostSub, lostHint;
 let idleRecord;
 let clearTitle, clearTime, clearTotal, clearHint;
 
@@ -55,20 +54,8 @@ export function initHud(scene) {
 
   overlayGfx = scene.add.graphics();
 
-  // --- GAME OVER ---
-  lostTitle = scene.add.text(VIEW_W / 2, VIEW_H / 2 - 55, 'GAME OVER', {
-    fontFamily: FONT, fontSize: '52px', color: ACCENT,
-    stroke: '#6a1508', strokeThickness: 2,
-  }).setOrigin(0.5).setVisible(false);
-
-  lostSub = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 18, '', {
-    fontFamily: FONT, fontSize: '16px', color: INK,
-  }).setOrigin(0.5).setVisible(false);
-
-  lostHint = scene.add.text(VIEW_W / 2, VIEW_H / 2 + 52, 'MELLANSLAG / FIRE = STARTA OM', {
-    fontFamily: FONT, fontSize: '15px', color: '#f2ede6',
-    stroke: '#000000', strokeThickness: 4,
-  }).setOrigin(0.5).setVisible(false);
+  // Game over-skärmen ritas, precis som vinstskärmen, av HTML-panelen
+  // i highscore.js — hud:en behåller bara den mörka overlay-bakgrunden.
 
   // --- BANA KLAR (mellanskärm) ---
   clearTitle = scene.add.text(VIEW_W / 2, VIEW_H / 2 - 60, '', {
@@ -136,14 +123,6 @@ export function updateHud() {
     overlayGfx.fillRect(0, 0, VIEW_W, VIEW_H);
   }
 
-  // --- GAME OVER ---
-  const isLost = phase === 'lost';
-  lostTitle.setVisible(isLost);
-  lostHint.setVisible(isLost && unlocked);
-  lostSub.setVisible(isLost);
-  if (isLost) {
-    lostSub.setText(`${levelName}: ${kills} AV ${totalEnemies} FIENDER NEDSKJUTNA`);
-  }
 
   // --- BANA KLAR ---
   const isClear = phase === 'levelclear';

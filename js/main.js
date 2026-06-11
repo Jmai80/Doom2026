@@ -11,9 +11,9 @@ import { updateWeapon, tryShoot }            from './weapon.js';
 import { state, startGame, updateState,
          resetState }                        from './state.js';
 import { initHud, updateHud, setIdleRecord } from './hud.js';
-import { showWinPanel, hideWinPanel,
+import { showEndPanel, hideEndPanel,
          isNameEntryOpen, fetchTop }         from './highscore.js';
-import { loadLevel, hasNextLevel }           from './levels.js';
+import { loadLevel, hasNextLevel, LEVELS }   from './levels.js';
 import Boot                                  from './Boot.js';
 import Preloader                             from './Preloader.js';
 
@@ -83,7 +83,7 @@ function update(_time, deltaMs) {
   if ((state.phase === 'won' || state.phase === 'lost') && state.uiLockout === 0 &&
       !isNameEntryOpen() &&
       (Phaser.Input.Keyboard.JustDown(cursors.space) || consumeFireTap())) {
-    hideWinPanel();
+    hideEndPanel();
     resetState();
     this.scene.restart();   // create() körs igen och laddar bana 0
     return;
@@ -137,9 +137,17 @@ function update(_time, deltaMs) {
     if (!bossAlive &&  heartbeat.isPlaying) heartbeat.stop();
   }
 
-  // Vinstögonblicket: öppna topplistepanelen exakt en gång
-  if (state.phase === 'won' && prevPhase !== 'won') {
-    showWinPanel(this, state.totalTime);
+  // Rundans slut (vinst ELLER game over): öppna topplistepanelen exakt
+  // en gång. Tiden för en förlorad runda = klarade banors tid + hela
+  // tidsgränsen på banan man föll på (den förbrukades ju).
+  if ((state.phase === 'won' || state.phase === 'lost') && prevPhase !== state.phase) {
+    const won = state.phase === 'won';
+    showEndPanel(this, {
+      won,
+      totalTime: won ? state.totalTime : state.totalTime + state.levelTimeLimit,
+      kills: state.runKills,
+      maxKills: LEVELS.reduce((sum, lv) => sum + lv.enemies.length, 0),
+    });
   }
   prevPhase = state.phase;
 

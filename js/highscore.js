@@ -15,11 +15,11 @@ const HEADERS = {
 //  API
 // ---------------------------------------------------------------------------
 
-/** Hämtar topplistan, snabbast först. */
+/** Hämtar topplistan: flest kills först, lägst tid som andranyckel. */
 export async function fetchTop(limit = 10) {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/${TABLE}` +
-    `?select=id,name,total_time&order=total_time.asc&limit=${limit}`,
+    `?select=id,name,total_time,kills&order=kills.desc,total_time.asc&limit=${limit}`,
     { headers: HEADERS }
   );
   if (!res.ok) throw new Error(`Supabase ${res.status}`);
@@ -27,11 +27,15 @@ export async function fetchTop(limit = 10) {
 }
 
 /** Skickar in ett resultat. Returnerar den skapade raden (med id). */
-export async function submitScore(name, totalTime) {
+export async function submitScore(name, totalTime, kills) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}`, {
     method: 'POST',
     headers: { ...HEADERS, Prefer: 'return=representation' },
-    body: JSON.stringify({ name, total_time: Number(totalTime.toFixed(1)) }),
+    body: JSON.stringify({
+      name,
+      total_time: Number(totalTime.toFixed(1)),
+      kills,
+    }),
   });
   if (!res.ok) throw new Error(`Supabase ${res.status}`);
   return (await res.json())[0];
@@ -49,14 +53,17 @@ export function isNameEntryOpen() {
   return nameEntryOpen;
 }
 
-/** Visas när alla banor klarats. */
-export function showWinPanel(scene, totalTime) {
+/** Slutpanelen — visas både vid vinst (won=true) och game over (won=false). */
+export function showEndPanel(scene, { won, totalTime, kills, maxKills }) {
   sceneRef = scene;
   const panel = document.getElementById('hs-panel');
   if (!panel) return;
 
+  document.getElementById('hs-title').textContent =
+    won ? 'ALLA BANOR KLARA!' : 'GAME OVER';
+  document.getElementById('hs-title').style.color = won ? '' : 'var(--accent)';
   document.getElementById('hs-time').textContent =
-    `TOTALTID: ${totalTime.toFixed(1)} S`;
+    `${kills} / ${maxKills} KILLS — ${totalTime.toFixed(1)} S`;
   document.getElementById('hs-list').innerHTML = '';
   document.getElementById('hs-status').textContent = '';
   document.getElementById('hs-entry').hidden = false;
@@ -73,14 +80,14 @@ export function showWinPanel(scene, totalTime) {
   scene.input.keyboard.disableGlobalCapture();
   input.focus();
 
-  bindOnce('hs-submit', () => submitAndShowList(totalTime));
-  bindOnce('hs-skip',   () => closeEntryAndShowList(null, totalTime));
+  bindOnce('hs-submit', () => submitAndShowList(totalTime, kills));
+  bindOnce('hs-skip',   () => closeEntryAndShowList(null));
   // Enter i fältet = skicka
-  input.onkeydown = e => { if (e.key === 'Enter') submitAndShowList(totalTime); };
+  input.onkeydown = e => { if (e.key === 'Enter') submitAndShowList(totalTime, kills); };
 }
 
 /** Stänger panelen helt. Anropas av main.js vid omstart. */
-export function hideWinPanel() {
+export function hideEndPanel() {
   const panel = document.getElementById('hs-panel');
   if (panel) panel.hidden = true;
   endNameEntry();
@@ -94,22 +101,22 @@ function endNameEntry() {
   nameEntryOpen = false;
 }
 
-async function submitAndShowList(totalTime) {
+async function submitAndShowList(totalTime, kills) {
   const input = document.getElementById('hs-name');
   const name = input.value.trim().slice(0, 12);
   if (!name) { input.focus(); return; }
 
   setStatus('SKICKAR...');
   try {
-    const myRow = await submitScore(name, totalTime);
-    closeEntryAndShowList(myRow, totalTime);
+    const myRow = await submitScore(name, totalTime, kills);
+    closeEntryAndShowList(myRow);
   } catch (err) {
     console.error(err);
     setStatus('KUNDE INTE SKICKA — KONTROLLERA ANSLUTNINGEN');
   }
 }
 
-async function closeEntryAndShowList(myRow, totalTime) {
+async function closeEntryAndShowList(myRow) {
   document.getElementById('hs-entry').hidden = true;
   endNameEntry();
   setStatus('HÄMTAR TOPPLISTAN...');
@@ -137,6 +144,7 @@ function renderList(rows, myRow) {
     li.innerHTML =
       `<span class="hs-rank">${i + 1}.</span>` +
       `<span class="hs-name">${escapeHtml(r.name)}</span>` +
+      `<span class="hs-kills">${r.kills ?? 0}✕</span>` +
       `<span class="hs-time">${Number(r.total_time).toFixed(1)} S</span>`;
     list.appendChild(li);
   });
@@ -148,6 +156,7 @@ function renderList(rows, myRow) {
     li.innerHTML =
       `<span class="hs-rank">—</span>` +
       `<span class="hs-name">${escapeHtml(myRow.name)}</span>` +
+      `<span class="hs-kills">${myRow.kills ?? 0}✕</span>` +
       `<span class="hs-time">${Number(myRow.total_time).toFixed(1)} S</span>`;
     list.appendChild(li);
   }

@@ -222,4 +222,4 @@ export function loadLevel(i) {
 /** Finns det fler banor efter den aktuella? */
 export function hasNextLevel() {
   return state.currentLevel + 1 < LEVELS.length;
-}
+}git 
